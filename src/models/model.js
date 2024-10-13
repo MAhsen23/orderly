@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
+const bcrypt = require('bcryptjs');
 
 const MenstrualCycleSchema = new Schema({
     user: {
@@ -64,7 +65,13 @@ const UserSchema = new Schema({
     }
 });
 
+UserSchema.pre('save', async function (next) {
+    if (this.isModified('password')) {
+        this.password = await bcrypt.hash(this.password, 8);
+    }
+    next();
+});
+
 const MenstrualCycle = mongoose.model('MenstrualCycle', MenstrualCycleSchema);
 const User = mongoose.model('User', UserSchema);
-
 module.exports = { MenstrualCycle, User };

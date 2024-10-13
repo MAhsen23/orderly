@@ -1,5 +1,7 @@
 const { MenstrualCycle, User } = require('../models/model');
 const moment = require('moment');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 exports.createUser = async (req, res) => {
     try {
@@ -14,14 +16,17 @@ exports.createUser = async (req, res) => {
 
 exports.getUser = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await User.findById(req.user._id).select('-password');
         if (!user) {
             return res.status(404).json({ message: 'error', error: 'User not found' });
         }
+        const lastCycle = await MenstrualCycle.findOne({ user: req.params.id }).sort({ cycleStartDate: -1 });
         const { name, email, averageCycleLength, averagePeriodDuration, isProfileComplete } = user;
+        const lastPeriodStartDate = lastCycle ? lastCycle.cycleStartDate : null;
+
         res.status(200).json({
             message: 'success',
-            user: { name, email, averageCycleLength, averagePeriodDuration, isProfileComplete }
+            user: { name, email, averageCycleLength, averagePeriodDuration, isProfileComplete, lastPeriodStartDate }
         });
     } catch (error) {
         res.status(500).json({ message: 'error', error: error.message });
@@ -31,15 +36,17 @@ exports.getUser = async (req, res) => {
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await User.findOne({ email, password });
-        if (!user) {
-            return res.status(401).json({ message: 'error', error: 'Invalid email or password' });
+        const user = await User.findOne({ email });
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(401).json({ message: 'error', error: "Invalid credentials" });
         }
-        res.status(200).json({ message: 'success', user: user._id, isProfileComplete: user.isProfileComplete });
+        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+        res.status(200).json({ message: 'success', token, user: user._id, isProfileComplete: user.isProfileComplete });
     } catch (error) {
         res.status(500).json({ message: 'error', error: error.message });
     }
 };
+
 
 exports.profileSetup = async (req, res) => {
     try {
@@ -63,51 +70,5 @@ exports.profileSetup = async (req, res) => {
         res.status(200).json({ message: 'success', user: user._id, isProfileComplete: true });
     } catch (error) {
         res.status(500).json({ message: 'error', error: error.message });
-    }
-};
-
-exports.predict = async (req, res) => {
-    try {
-        const userId = req.params.id;
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        const cycles = await MenstrualCycle.find({ user: userId }).sort({ cycleStartDate: -1 }).limit(6);
-
-        if (cycles.length < 3) {
-            return res.status(400).json({ message: 'Insufficient cycle data for accurate prediction' });
-        }
-
-        const cycleLengths = cycles.slice(0, -1).map((cycle, index) =>
-            moment(cycle.cycleStartDate).diff(moment(cycles[index + 1].cycleStartDate), 'days')
-        );
-
-        const validCycleLengths = cycleLengths.filter(length => length >= 21 && length <= 35);
-        const averageCycleLength = validCycleLengths.length > 0
-            ? Math.round(validCycleLengths.reduce((a, b) => a + b, 0) / validCycleLengths.length)
-            : user.averageCycleLength || 28;
-
-        const lastCycle = moment(cycles[0].cycleStartDate);
-        const nextCycle = lastCycle.clone().add(averageCycleLength, 'days');
-        const currentDate = moment();
-
-        let remainingDays;
-        if (nextCycle.isAfter(currentDate)) {
-            remainingDays = nextCycle.diff(currentDate, 'days');
-        } else {
-            const daysPassed = currentDate.diff(nextCycle, 'days');
-            remainingDays = averageCycleLength - (daysPassed % averageCycleLength);
-        }
-
-        const result = {
-            lastCycle: lastCycle.toDate(),
-            nextCycle: nextCycle.toDate(),
-            remainingDays: remainingDays
-        };
-        res.status(200).json({ result });
-    } catch (error) {
-        console.error('Error in cycle prediction:', error);
-        res.status(500).json({ message: 'An error occurred while predicting the next cycle', error: error.message });
     }
 };
