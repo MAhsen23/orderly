@@ -34,11 +34,9 @@ exports.getUser = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-    console.log("what is the data in login", req.body)
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email });
-        console.log(user)
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(401).json({ message: 'error', error: "Invalid credentials" });
         }
@@ -57,6 +55,7 @@ exports.profileSetup = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: 'error', error: 'User not found' });
         }
+        const { name, email } = user;
         user.birthYear = birthYear;
         user.averageCycleLength = averageCycleLength;
         user.averagePeriodDuration = averagePeriodDuration;
@@ -69,7 +68,7 @@ exports.profileSetup = async (req, res) => {
             cycleDuration: averagePeriodDuration
         });
         await newCycle.save();
-        res.status(200).json({ message: 'success', user: user._id, isProfileComplete: true });
+        res.status(200).json({ message: 'success', user: user, isProfileComplete: true });
     } catch (error) {
         res.status(500).json({ message: 'error', error: error.message });
     }
