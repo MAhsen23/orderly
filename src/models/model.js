@@ -32,6 +32,21 @@ const MenstrualCycleSchema = new Schema({
     }
 });
 
+const NoteSchema = new Schema({
+    title: {
+        type: String,
+        required: false
+    },
+    content: {
+        type: String,
+        required: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+
 const UserSchema = new Schema({
     name: {
         type: String,
@@ -62,7 +77,8 @@ const UserSchema = new Schema({
     isProfileComplete: {
         type: Boolean,
         default: false
-    }
+    },
+    notes: [NoteSchema]
 });
 
 UserSchema.pre('save', async function (next) {

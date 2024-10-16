@@ -21,12 +21,12 @@ exports.getUser = async (req, res) => {
             return res.status(404).json({ message: 'error', error: 'User not found' });
         }
         const lastCycle = await MenstrualCycle.findOne({ user: req.params.id }).sort({ cycleStartDate: -1 });
-        const { name, email, birthYear, averageCycleLength, averagePeriodDuration, isProfileComplete } = user;
+        const { name, email, birthYear, averageCycleLength, averagePeriodDuration, isProfileComplete, notes } = user;
         const lastPeriodStartDate = lastCycle ? lastCycle.cycleStartDate : null;
 
         res.status(200).json({
             message: 'success',
-            user: { name, email, birthYear, averageCycleLength, averagePeriodDuration, isProfileComplete, lastPeriodStartDate }
+            user: { name, email, birthYear, averageCycleLength, averagePeriodDuration, isProfileComplete, lastPeriodStartDate, notes }
         });
     } catch (error) {
         res.status(500).json({ message: 'error', error: error.message });
@@ -69,6 +69,24 @@ exports.profileSetup = async (req, res) => {
         });
         await newCycle.save();
         res.status(200).json({ message: 'success', user: user, isProfileComplete: true });
+    } catch (error) {
+        res.status(500).json({ message: 'error', error: error.message });
+    }
+};
+
+exports.addNotes = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).select('-password');
+        const { notes } = req.body;
+        if (!user) {
+            return res.status(404).json({ message: 'error', error: 'User not found' });
+        }
+        if (!Array.isArray(notes)) {
+            return res.status(400).json({ message: 'error', error: 'Notes should be an array' });
+        }
+        user.notes = notes;
+        await user.save();
+        res.status(200).json({ message: 'success' });
     } catch (error) {
         res.status(500).json({ message: 'error', error: error.message });
     }
