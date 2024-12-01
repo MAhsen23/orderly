@@ -32,9 +32,7 @@ exports.createUser = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 isProfileComplete: user.isProfileComplete,
-                isVerified: user.isVerified,
-                notes: user.notes,
-                menstrualCycles: user.menstrualCycles
+                isVerified: user.isVerified
             },
         });
     } catch (error) {
@@ -60,6 +58,9 @@ exports.login = async (req, res) => {
                 .status(404)
                 .json({ success: false, message: 'Invalid Credentials' });
         }
+
+        const lastPeriodStartDate = user.menstrualCycles?.length ? user.menstrualCycles.sort((a, b) => new Date(b.startDate) - new Date(a.startDate))[0].startDate : null;
+
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
             expiresIn: "30d",
         });
@@ -77,9 +78,10 @@ exports.login = async (req, res) => {
                 averageCycleLength: user.averageCycleLength,
                 averagePeriodDuration: user.averagePeriodDuration,
                 cycleType: user.cycleType,
-                notes: user.notes,
-                menstrualCycles: user.menstrualCycles,
+                lastPeriodStartDate
             },
+            notes: user.notes,
+            menstrualCycles: user.menstrualCycles,
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -126,8 +128,6 @@ exports.verifyOTP = async (req, res) => {
                 averageCycleLength: user.averageCycleLength,
                 averagePeriodDuration: user.averagePeriodDuration,
                 cycleType: user.cycleType,
-                notes: user.notes,
-                menstrualCycles: user.menstrualCycles,
             },
         });
     } catch (error) {
@@ -153,13 +153,13 @@ exports.profileSetup = async (req, res) => {
         user.averageCycleLength = averageCycleLength;
         user.averagePeriodDuration = averagePeriodDuration;
         user.cycleType = cycleType;
-        user.isProfileComplete = true;
-        await user.save();
 
         user.menstrualCycles.push({
             startDate: lastPeriodStartDate,
             duration: averagePeriodDuration,
         });
+
+        user.isProfileComplete = true;
         await user.save();
 
         res.status(200).json({
@@ -175,9 +175,10 @@ exports.profileSetup = async (req, res) => {
                 averageCycleLength: user.averageCycleLength,
                 averagePeriodDuration: user.averagePeriodDuration,
                 cycleType: user.cycleType,
-                notes: user.notes,
-                menstrualCycles: user.menstrualCycles,
-            }
+                lastPeriodStartDate,
+            },
+            notes: user.notes,
+            menstrualCycles: user.menstrualCycles,
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -204,7 +205,7 @@ exports.addNotes = async (req, res) => {
         }
         user.notes = notes;
         await user.save();
-        res.status(200).json({ success: true, message: 'Notes updated successfully' });
+        res.status(200).json({ success: true, message: 'Notes updated successfully', notes });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
