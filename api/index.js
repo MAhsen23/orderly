@@ -12,6 +12,6 @@ mongoose.connect(process.env.MONGODB_URI, {}).then(() => console.log('MongoDB Co
 
 app.use('/api', routes);
 app.get('/', (req, res) => {
-    res.status(200).send("🌟 Welcome to Orderly! Your API is running smoothly.");
+    res.json({ message: 'Welcome to Orderly! Your API is running smoothly.' });
 });
 module.exports = app;
