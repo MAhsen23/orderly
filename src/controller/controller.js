@@ -32,11 +32,13 @@ exports.createUser = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 isProfileComplete: user.isProfileComplete,
+                isVerified: user.isVerified,
                 notes: user.notes,
                 menstrualCycles: user.menstrualCycles
             },
         });
     } catch (error) {
+        console.log(error)
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -58,7 +60,7 @@ exports.login = async (req, res) => {
                 .status(404)
                 .json({ success: false, message: 'Invalid Credentials' });
         }
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRETKEY, {
+        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
             expiresIn: "30d",
         });
         res.status(200).json({
@@ -70,6 +72,7 @@ exports.login = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 isProfileComplete: user.isProfileComplete,
+                isVerified: user.isVerified,
                 birthYear: user.birthYear,
                 averageCycleLength: user.averageCycleLength,
                 averagePeriodDuration: user.averagePeriodDuration,
@@ -105,11 +108,8 @@ exports.verifyOTP = async (req, res) => {
         user.isVerified = true;
         user.otp = undefined;
         user.otpExpires = undefined;
-        if (!user.coins) {
-            user.coins = 50;
-        }
         await user.save();
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRETKEY, {
+        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
             expiresIn: "30d",
         });
         res.status(200).json({
@@ -121,6 +121,7 @@ exports.verifyOTP = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 isProfileComplete: user.isProfileComplete,
+                isVerified: user.isVerified,
                 birthYear: user.birthYear,
                 averageCycleLength: user.averageCycleLength,
                 averagePeriodDuration: user.averagePeriodDuration,
@@ -130,6 +131,7 @@ exports.verifyOTP = async (req, res) => {
             },
         });
     } catch (error) {
+        console.log(error)
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -168,6 +170,7 @@ exports.profileSetup = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 isProfileComplete: user.isProfileComplete,
+                isVerified: user.isVerified,
                 birthYear: user.birthYear,
                 averageCycleLength: user.averageCycleLength,
                 averagePeriodDuration: user.averagePeriodDuration,
