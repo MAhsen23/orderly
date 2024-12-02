@@ -59,8 +59,6 @@ exports.login = async (req, res) => {
                 .json({ success: false, message: 'Invalid Credentials' });
         }
 
-        const lastPeriodStartDate = user.menstrualCycles?.length ? user.menstrualCycles.sort((a, b) => new Date(b.startDate) - new Date(a.startDate))[0].startDate : null;
-
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
             expiresIn: "30d",
         });
@@ -78,7 +76,6 @@ exports.login = async (req, res) => {
                 averageCycleLength: user.averageCycleLength,
                 averagePeriodDuration: user.averagePeriodDuration,
                 cycleType: user.cycleType,
-                lastPeriodStartDate
             },
             notes: user.notes,
             menstrualCycles: user.menstrualCycles,
@@ -124,10 +121,6 @@ exports.verifyOTP = async (req, res) => {
                 email: user.email,
                 isProfileComplete: user.isProfileComplete,
                 isVerified: user.isVerified,
-                birthYear: user.birthYear,
-                averageCycleLength: user.averageCycleLength,
-                averagePeriodDuration: user.averagePeriodDuration,
-                cycleType: user.cycleType,
             },
         });
     } catch (error) {
@@ -175,7 +168,6 @@ exports.profileSetup = async (req, res) => {
                 averageCycleLength: user.averageCycleLength,
                 averagePeriodDuration: user.averagePeriodDuration,
                 cycleType: user.cycleType,
-                lastPeriodStartDate,
             },
             notes: user.notes,
             menstrualCycles: user.menstrualCycles,
