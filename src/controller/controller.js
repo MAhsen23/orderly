@@ -62,6 +62,7 @@ exports.login = async (req, res) => {
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
             expiresIn: "30d",
         });
+        const notesContent = user.notes?.map(note => note.content);
         res.status(200).json({
             success: true,
             message: 'Login successful. Welcome back!',
@@ -77,7 +78,7 @@ exports.login = async (req, res) => {
                 averagePeriodDuration: user.averagePeriodDuration,
                 cycleType: user.cycleType,
             },
-            notes: user.notes,
+            notes: notesContent,
             menstrualCycles: user.menstrualCycles,
         });
     } catch (error) {
@@ -155,6 +156,8 @@ exports.profileSetup = async (req, res) => {
         user.isProfileComplete = true;
         await user.save();
 
+        const notesContent = user.notes?.map(note => note.content);
+
         res.status(200).json({
             success: true,
             message: 'Profile setup successfully.',
@@ -169,7 +172,7 @@ exports.profileSetup = async (req, res) => {
                 averagePeriodDuration: user.averagePeriodDuration,
                 cycleType: user.cycleType,
             },
-            notes: user.notes,
+            notes: notesContent,
             menstrualCycles: user.menstrualCycles,
         });
     } catch (error) {
