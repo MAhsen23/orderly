@@ -19,7 +19,8 @@ exports.createUser = async (req, res) => {
         const otp = generateOTP();
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
         const emailResult = await sendOTPEmail(email, otp);
-        console.log(emailResult)
+        console.log("What is the email result ", emailResult);
+
         if (emailResult.success) {
             user.otp = otp;
             user.otpExpires = otpExpires;
@@ -37,7 +38,6 @@ exports.createUser = async (req, res) => {
             },
         });
     } catch (error) {
-        console.log(error)
         res.status(500).json({ success: false, message: error.message });
     }
 };
