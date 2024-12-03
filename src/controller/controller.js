@@ -179,7 +179,7 @@ exports.profileSetup = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-exports.addNotes = async (req, res) => {
+exports.notes = async (req, res) => {
     try {
         const user = await User.findById(req.user._id).select('-password');
         const { notes } = req.body;
@@ -198,7 +198,10 @@ exports.addNotes = async (req, res) => {
         if (notes.length > 5) {
             return res.status(400).json({ success: false, message: 'You can only save up to 5 notes' });
         }
-        user.notes = notes;
+        user.notes = notes.map(note => ({
+            content: note,
+            createdAt: new Date(),
+        }));
         await user.save();
         res.status(200).json({ success: true, message: 'Notes updated successfully', notes });
     } catch (error) {
