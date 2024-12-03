@@ -28,6 +28,6 @@ exports.sendOTPEmail = async (email, otp) => {
     await transporter.sendMail(mailOptions);
     return { success: true, message: 'OTP sent successfully' };
   } catch (error) {
-    return { success: false, message: 'Failed to send OTP email' };
+    return { success: false, message: error.message };
   }
 }

@@ -18,14 +18,11 @@ exports.createUser = async (req, res) => {
         const user = await User.create({ name, email, password });
         const otp = generateOTP();
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+        user.otp = otp;
+        user.otpExpires = otpExpires;
+        await user.save();
         const emailResult = await sendOTPEmail(email, otp);
         console.log("What is the email result ", emailResult);
-
-        if (emailResult.success) {
-            user.otp = otp;
-            user.otpExpires = otpExpires;
-            await user.save();
-        }
         res.status(201).json({
             success: true,
             message: 'User registered successfully. Please check email for OTP.',
