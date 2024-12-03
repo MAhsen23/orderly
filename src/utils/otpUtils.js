@@ -1,9 +1,9 @@
 const nodemailer = require('nodemailer');
+require('dotenv').config();
 
 exports.generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
-
 exports.sendOTPEmail = async (email, otp) => {
   try {
     const transporter = nodemailer.createTransport({

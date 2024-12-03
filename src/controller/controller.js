@@ -19,6 +19,7 @@ exports.createUser = async (req, res) => {
         const otp = generateOTP();
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
         const emailResult = await sendOTPEmail(email, otp);
+        console.log(emailResult)
         if (emailResult.success) {
             user.otp = otp;
             user.otpExpires = otpExpires;
