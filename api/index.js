@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-mongoose.connect(process.env.MONGODB_URI, {}).then(() => console.log('MongoDB Connected')).catch((err) => console.error('Could not connect to MongoDB', err));
+//mongoose.connect(process.env.MONGODB_URI, {}).then(() => console.log('MongoDB Connected')).catch((err) => console.error('Could not connect to MongoDB', err));
 
 app.use('/api', routes);
 app.get('/', (req, res) => {
