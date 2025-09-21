@@ -14,4 +14,4 @@ app.use('/api', routes);
 app.get('/', (req, res) => {
     res.status(200).send("🌟 Welcome to Orderly! Your API is running smoothly.");
 });
-module.exports = app;
+export default app;
