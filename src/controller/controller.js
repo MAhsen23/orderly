@@ -288,21 +288,29 @@ exports.getSuggestedRestaurant = async (req, res) => {
             Budget: ${budget || "any"}.
             Distance: ${distance || "any"}.
 
-            Please suggest ONE real restaurant in that city 
-            (include name, address, approximate rating, phone number, official website if available).
-            Also suggest ONE popular ${cuisine} dish likely served there.
+            Please suggest ONE real restaurant within this location range.
+            Do NOT return multiple locations, general descriptions, or suggestions like "various places".
+            Always return ONE real restaurant with a valid street address.
+
+            Include: 
+            - name 
+            - full street address (not a region or multiple locations) 
+            - approximate rating 
+            - phone number (if available, otherwise "Not available") 
+            - official website (if available, otherwise "Not available")
+            - one popular ${cuisine} dish likely served there
 
             Respond ONLY in raw JSON (no markdown, no explanation) with this structure:
             {
-              "name": "Restaurant name",
-              "address": "Restaurant address",
-              "rating": "4.5",
-              "cuisine": "${cuisine}",
-              "priceRange": "${budget || "any"}",
-              "diningOption": "${diningPreference || "any"}",
-              "selectedFood": "Dish name",
-              "website": "https://restaurant-website.com",
-              "phone": "+92-300-1234567"
+            "name": "Restaurant name",
+            "address": "Full street address",
+            "rating": "4.5",
+            "cuisine": "${cuisine}",
+            "priceRange": "${budget || "any"}",
+            "diningOption": "${diningPreference || "any"}",
+            "selectedFood": "Dish name",
+            "website": "https://restaurant-website.com",
+            "phone": "+92-300-1234567"
             }
         `;
 
