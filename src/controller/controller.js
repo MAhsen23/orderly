@@ -279,6 +279,7 @@ exports.notes = async (req, res) => {
 exports.getSuggestedRestaurant = async (req, res) => {
     try {
         const { lat, lng, diningPreference, distance, budget, cuisine } = req.body;
+
         const prompt = `
             You are a restaurant recommendation assistant.
             A user is located at latitude ${lat}, longitude ${lng}.
@@ -287,7 +288,8 @@ exports.getSuggestedRestaurant = async (req, res) => {
             Budget: ${budget || "any"}.
             Distance: ${distance || "any"}.
 
-            Please suggest ONE real restaurant in that city (name, address, approximate rating, official website if available).
+            Please suggest ONE real restaurant in that city 
+            (include name, address, approximate rating, phone number, official website if available).
             Also suggest ONE popular ${cuisine} dish likely served there.
 
             Respond ONLY in raw JSON (no markdown, no explanation) with this structure:
@@ -299,7 +301,8 @@ exports.getSuggestedRestaurant = async (req, res) => {
               "priceRange": "${budget || "any"}",
               "diningOption": "${diningPreference || "any"}",
               "selectedFood": "Dish name",
-              "website": "https://restaurant-website.com"
+              "website": "https://restaurant-website.com",
+              "phone": "+92-300-1234567"
             }
         `;
 
