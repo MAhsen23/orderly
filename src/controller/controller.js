@@ -287,20 +287,21 @@ exports.getSuggestedRestaurant = async (req, res) => {
             Budget: ${budget || "any"}.
             Distance: ${distance || "any"}.
 
-            Please suggest ONE real restaurant in that city (name, address, approximate rating).
+            Please suggest ONE real restaurant in that city (name, address, approximate rating, official website if available).
             Also suggest ONE popular ${cuisine} dish likely served there.
 
             Respond ONLY in raw JSON (no markdown, no explanation) with this structure:
             {
-            "name": "Restaurant name",
-            "address": "Restaurant address",
-            "rating": "4.5",
-            "cuisine": "${cuisine}",
-            "priceRange": "${budget || "any"}",
-            "diningOption": "${diningPreference || "any"}",
-            "selectedFood": "Dish name"
+              "name": "Restaurant name",
+              "address": "Restaurant address",
+              "rating": "4.5",
+              "cuisine": "${cuisine}",
+              "priceRange": "${budget || "any"}",
+              "diningOption": "${diningPreference || "any"}",
+              "selectedFood": "Dish name",
+              "website": "https://restaurant-website.com"
             }
-            `;
+        `;
 
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent(prompt);
