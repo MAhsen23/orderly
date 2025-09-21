@@ -314,7 +314,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
             }
         `;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "Gemma 3n" });
         const result = await model.generateContent(prompt);
         let text = result.response.text().trim();
 
