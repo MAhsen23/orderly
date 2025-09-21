@@ -2,6 +2,9 @@ const { User } = require('../models/model');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { sendOTPEmail, generateOTP } = require('../utils/otpUtils');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 exports.createUser = async (req, res) => {
     try {
@@ -205,6 +208,123 @@ exports.notes = async (req, res) => {
         }));
         await user.save();
         res.status(200).json({ success: true, message: 'Notes updated successfully', notes });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+
+/*export const getSuggestedRestaurant = async (req, res) => {
+    try {
+        const { lat, lng, diningPreference, distance, budget, cuisine } = req.body;
+        const distanceMap = {
+            walkable: 500,
+            "1mile": 1600,
+            "3mile": 4800,
+            "5mile": 8000,
+            "10mile": 16000,
+        };
+        const radius = distanceMap[distance] || 3000;
+        const budgetMap = {
+            "under15": 1,
+            "15-30": 2,
+            "30-60": 3,
+            "60-100": 4,
+        };
+
+        const apiUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=restaurant&keyword=${encodeURIComponent(cuisine)}&key=${process.env.GOOGLE_PLACES_KEY}`;
+        const resp = await fetch(apiUrl);
+        const data = await resp.json();
+
+        if (!data.results || data.results.length === 0) {
+            return res.status(404).json({ success: false, message: "No restaurants found for this cuisine" });
+        }
+
+        let filtered = data.results;
+        if (budget) {
+            filtered = filtered.filter(r => r.price_level === budgetMap[budget]);
+        }
+
+        if (filtered.length === 0) {
+            return res.status(404).json({ sucess: false, message: "No restaurants found for this cuisine and budget" });
+        }
+
+        const randomRestaurant = filtered[Math.floor(Math.random() * filtered.length)];
+        const prompt = `Give me one popular ${cuisine} dish that is most likely served at the restaurant "${randomRestaurant.name}" located in ${randomRestaurant.vicinity}. 
+        Return only the dish name, nothing else.`;
+
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const result = await model.generateContent(prompt);
+        const selectedFood = result.response.text().trim();
+
+        res.status(200).json({
+            sucess: true,
+            restaurant: {
+                name: randomRestaurant.name,
+                address: randomRestaurant.vicinity,
+                rating: randomRestaurant.rating,
+                cuisine,
+                priceRange: budget,
+                diningOption: diningPreference,
+            },
+            selectedFood,
+        });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+*/
+
+exports.getSuggestedRestaurant = async (req, res) => {
+    try {
+        const { lat, lng, diningPreference, distance, budget, cuisine } = req.body;
+        const prompt = `
+            You are a restaurant recommendation assistant.
+            A user is located at latitude ${lat}, longitude ${lng}.
+            They want a ${cuisine} restaurant.
+            Dining preference: ${diningPreference || "any"}.
+            Budget: ${budget || "any"}.
+            Distance: ${distance || "any"}.
+
+            Please suggest ONE real restaurant in that city (name, address, approximate rating).
+            Also suggest ONE popular ${cuisine} dish likely served there.
+
+            Respond ONLY in raw JSON (no markdown, no explanation) with this structure:
+            {
+            "name": "Restaurant name",
+            "address": "Restaurant address",
+            "rating": "4.5",
+            "cuisine": "${cuisine}",
+            "priceRange": "${budget || "any"}",
+            "diningOption": "${diningPreference || "any"}",
+            "selectedFood": "Dish name"
+            }
+            `;
+
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const result = await model.generateContent(prompt);
+        let text = result.response.text().trim();
+
+        if (text.startsWith("```")) {
+            text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+        }
+
+        let restaurantData;
+        try {
+            restaurantData = JSON.parse(text);
+        } catch (e) {
+            return res.status(500).json({
+                success: false,
+                message: "Failed to parse Gemini response",
+                raw: text,
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            restaurant: restaurantData,
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
