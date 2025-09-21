@@ -1,10 +1,10 @@
-import nodemailer from 'nodemailer';
+const nodemailer = require('nodemailer');
 
-export const generateOTP = () => {
+exports.generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-export const sendOTPEmail = async (email, otp) => {
+exports.sendOTPEmail = async (email, otp) => {
   try {
     const transporter = nodemailer.createTransport({
       service: 'Gmail',
