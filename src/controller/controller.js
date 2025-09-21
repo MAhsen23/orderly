@@ -6,7 +6,7 @@ import { sendOTPEmail, generateOTP } from '../utils/otpUtils.js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 dotenv.config()
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI("AIzaSyBdsQszJiV8fD_k9MGogtmPDmFtxRvgBTA");
 
 export const createUser = async (req, res) => {
     try {
