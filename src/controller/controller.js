@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import { sendOTPEmail, generateOTP } from '../utils/otpUtils.js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-dotenv.config();
+dotenv.config()
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export const createUser = async (req, res) => {
