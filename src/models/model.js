@@ -1,6 +1,7 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
-const bcrypt = require('bcryptjs');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+
+const { Schema } = mongoose;
 
 const UserSchema = new Schema({
     name: { type: String, required: true },
@@ -12,7 +13,7 @@ const UserSchema = new Schema({
     birthYear: { type: Number },
     averageCycleLength: { type: Number },
     averagePeriodDuration: { type: Number },
-    cycleType: { type: String, enum: ['Regular', 'Irregular', 'Don\'t know'] },
+    cycleType: { type: String, enum: ['Regular', 'Irregular', "Don't know"] },
     menstrualCycles: [{
         startDate: { type: Date, required: true },
         endDate: { type: Date },
@@ -35,4 +36,4 @@ UserSchema.pre('save', async function (next) {
 });
 
 const User = mongoose.model('User', UserSchema);
-module.exports = { User };
+export { User };
