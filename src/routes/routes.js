@@ -9,4 +9,5 @@ router.post('/verify/:id', controller.verifyOTP);
 router.post('/profile-setup', auth, controller.profileSetup);
 router.post('/users/notes', auth, controller.notes);
 router.post('/roulette/suggest-restaurant', controller.getSuggestedRestaurant);
+router.get('/roulette/suggestions', controller.getRestaurantSuggestions);
 module.exports = router;
