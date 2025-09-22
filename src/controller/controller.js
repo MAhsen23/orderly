@@ -378,3 +378,53 @@ exports.getSuggestedRestaurant = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+exports.getRestaurantSuggestions = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const totalCount = await RestaurantSuggestion.countDocuments();
+        const totalPages = Math.ceil(totalCount / limit);
+
+        const suggestions = await RestaurantSuggestion.find()
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .select('-__v')
+            .lean();
+
+        const parsedSuggestions = suggestions.map(suggestion => ({
+            _id: suggestion._id,
+            email: suggestion.email,
+            latitude: suggestion.latitude,
+            longitude: suggestion.longitude,
+            diningPreference: suggestion.diningPreference,
+            distance: suggestion.distance,
+            budget: suggestion.budget,
+            cuisine: suggestion.cuisine,
+            requestDetails: JSON.parse(suggestion.requestDetails),
+            result: JSON.parse(suggestion.result),
+            createdAt: suggestion.createdAt
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: parsedSuggestions,
+            currentPage: page,
+            totalPages: totalPages,
+            totalCount: totalCount,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1,
+            limit: limit
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch restaurant suggestions',
+            error: error.message
+        });
+    }
+};
