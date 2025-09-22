@@ -297,7 +297,7 @@ async function getCityAndCountry(lat, lng) {
 
 exports.getSuggestedRestaurant = async (req, res) => {
     try {
-        const { lat, lng, diningPreference, distance, budget, cuisine } = req.body;
+        const { lat, lng, diningPreference, distance, budget, cuisine, email } = req.body;
         const { city, country } = await getCityAndCountry(lat, lng);
         const prompt = `
             You are a restaurant recommendation assistant.
@@ -354,9 +354,24 @@ exports.getSuggestedRestaurant = async (req, res) => {
             });
         }
 
+        restaurantSuggestionData = new RestaurantSuggestion({
+            email: email || 'anonymous@unknown.com',
+            latitude: lat,
+            longitude: lng,
+            diningPreference: diningPreference || null,
+            distance: distance || null,
+            budget: budget || null,
+            cuisine: cuisine,
+            requestDetails: JSON.stringify(requestDetails),
+            result: JSON.stringify(restaurantData)
+        });
+
+        await restaurantSuggestionData.save();
+
         res.status(200).json({
             success: true,
             restaurant: restaurantData,
+            suggestionId: restaurantSuggestionData._id
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

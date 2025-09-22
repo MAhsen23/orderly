@@ -6,19 +6,17 @@ const RestaurantSuggestionSchema = new Schema({
         type: String,
         default: 'anonymous@unknown.com'
     },
-    latitude: { type: Number, required: true },
-    longitude: { type: Number, required: true },
+    latitude: { type: Number },
+    longitude: { type: Number },
     diningPreference: { type: String },
     distance: { type: String },
     budget: { type: String },
-    cuisine: { type: String, required: true },
+    cuisine: { type: String },
     requestDetails: {
-        type: String,
-        required: true
+        type: String
     },
     result: {
-        type: String,
-        required: true
+        type: String
     },
     createdAt: {
         type: Date,
