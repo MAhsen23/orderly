@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { sendOTPEmail, generateOTP } = require('../utils/otpUtils');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+import fetch from "node-fetch";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
