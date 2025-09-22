@@ -295,7 +295,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
             - Budget: ${budget || "any"}
             - Distance: ${distance || "any"}
 
-            Return ONLY ONE restaurant in strict JSON format:
+            Respond ONLY in raw JSON (no markdown, no explanation) with this structure:
             {
             "name": "Restaurant name",
             "address": "Full street address near the given coordinates",
