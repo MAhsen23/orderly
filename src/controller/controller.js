@@ -276,43 +276,65 @@ exports.notes = async (req, res) => {
 };
 */
 
+async function getCityAndCountry(lat, lng) {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
+
+    const res = await fetch(url, {
+        headers: {
+            "User-Agent": "Orderly/1.0",
+        },
+    });
+    const data = await res.json();
+    const city =
+        data.address.city ||
+        data.address.town ||
+        data.address.village ||
+        data.address.hamlet ||
+        "Unknown";
+    const country = data.address.country || "Unknown";
+    return { city, country };
+}
+
 exports.getSuggestedRestaurant = async (req, res) => {
     try {
-        const { lat, lng, diningPreference, distance, budget, cuisine } = req.body;
+        const { lat, lng, diningPreference, distance, budget, cuisine, city, country } = req.body;
+        // const { city, country } = await getCityAndCountry(lat, lng);
 
         const prompt = `
             You are a restaurant recommendation assistant.
-            A user is located at latitude ${lat}, longitude ${lng}.
-            They want a ${cuisine} restaurant.
+            A user is located at latitude ${lat}, longitude ${lng}, which is in ${city}, ${country}.
+            They want a ${cuisine} restaurant in ${city}, ${country}.
             Dining preference: ${diningPreference || "any"}.
             Budget: ${budget || "any"}.
             Distance: ${distance || "any"}.
 
-            Please suggest ONE real restaurant within this location range.
+            Please suggest ONE real restaurant located specifically in ${city}, ${country}.
             Do NOT return multiple locations, general descriptions, or suggestions like "various places".
             Always return ONE real restaurant with a valid street address.
 
-            Include: 
-            - name 
-            - full street address (not a region or multiple locations) 
-            - approximate rating 
-            - phone number (if available, otherwise "Not available") 
+            Include:
+            - name
+            - full street address (not a region or multiple locations)
+            - approximate rating
+            - phone number (if available, otherwise "Not available")
             - official website (if available, otherwise "Not available")
             - one popular ${cuisine} dish likely served there
+            - a short 2–3 sentence description of the restaurant
 
             Respond ONLY in raw JSON (no markdown, no explanation) with this structure:
             {
-            "name": "Restaurant name",
-            "address": "Full street address",
-            "rating": "4.5",
-            "cuisine": "${cuisine}",
-            "priceRange": "${budget || "any"}",
-            "diningOption": "${diningPreference || "any"}",
-            "selectedFood": "Dish name",
-            "website": "https://restaurant-website.com",
-            "phone": "+92-300-1234567"
+                "name": "Restaurant name",
+                "address": "Full street address",
+                "rating": "4.5",
+                "cuisine": "${cuisine}",
+                "priceRange": "${budget || "any"}",
+                "diningOption": "${diningPreference || "any"}",
+                "selectedFood": "Dish name",
+                "website": "https://restaurant-website.com",
+                "phone": "+92-300-1234567",
+                "description": "A short description of the restaurant"
             }
-        `;
+            `;
 
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent(prompt);
