@@ -282,37 +282,32 @@ exports.getSuggestedRestaurant = async (req, res) => {
 
         const prompt = `
             You are a restaurant recommendation assistant.
-            A user is located at latitude ${lat}, longitude ${lng}.
-            They want a ${cuisine} restaurant.
-            Dining preference: ${diningPreference || "any"}.
-            Budget: ${budget || "any"}.
-            Distance: ${distance || "any"}.
 
-            Please suggest ONE real restaurant within this location range.
-            Do NOT return multiple locations, general descriptions, or suggestions like "various places".
-            Always return ONE real restaurant with a valid street address.
+            IMPORTANT RULES:
+            - The restaurant MUST be located within 5km of latitude ${lat}, longitude ${lng}.
+            - If no restaurant is known in this location, say "No restaurant found".
+            - DO NOT invent addresses outside this area (example: Dallas, New York, etc. are invalid).
+            - Address MUST be in the same city as the provided coordinates.
 
-            Include: 
-            - name 
-            - full street address (not a region or multiple locations) 
-            - approximate rating 
-            - phone number (if available, otherwise "Not available") 
-            - official website (if available, otherwise "Not available")
-            - one popular ${cuisine} dish likely served there
+            User preferences:
+            - Cuisine: ${cuisine}
+            - Dining preference: ${diningPreference || "any"}
+            - Budget: ${budget || "any"}
+            - Distance: ${distance || "any"}
 
-            Respond ONLY in raw JSON (no markdown, no explanation) with this structure:
+            Return ONLY ONE restaurant in strict JSON format:
             {
             "name": "Restaurant name",
-            "address": "Full street address",
+            "address": "Full street address near the given coordinates",
             "rating": "4.5",
             "cuisine": "${cuisine}",
             "priceRange": "${budget || "any"}",
             "diningOption": "${diningPreference || "any"}",
-            "selectedFood": "Dish name",
+            "selectedFood": "Popular dish",
             "website": "https://restaurant-website.com",
             "phone": "+92-300-1234567"
             }
-        `;
+            `;
 
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent(prompt);
