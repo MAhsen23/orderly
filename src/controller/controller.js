@@ -300,6 +300,18 @@ exports.getSuggestedRestaurant = async (req, res) => {
     try {
         const { lat, lng, diningPreference, distance, budget, cuisine, email } = req.body;
         const { city, country } = await getCityAndCountry(lat, lng);
+        const requestDetails = {
+            latitude: lat,
+            longitude: lng,
+            diningPreference: diningPreference || 'any',
+            distance: distance || 'any',
+            budget: budget || 'any',
+            cuisine: cuisine,
+            email: email || null,
+            city: city,
+            country: country,
+            timestamp: new Date().toISOString()
+        };
         const prompt = `
             You are a restaurant recommendation assistant.
             A user is located at latitude ${lat}, longitude ${lng}, which is in ${city}, ${country}.
