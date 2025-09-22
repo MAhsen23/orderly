@@ -277,7 +277,7 @@ exports.notes = async (req, res) => {
 */
 
 async function getCityAndCountry(lat, lng) {
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`;
 
     const res = await fetch(url, {
         headers: {
@@ -297,9 +297,8 @@ async function getCityAndCountry(lat, lng) {
 
 exports.getSuggestedRestaurant = async (req, res) => {
     try {
-        const { lat, lng, diningPreference, distance, budget, cuisine, city, country } = req.body;
-        // const { city, country } = await getCityAndCountry(lat, lng);
-
+        const { lat, lng, diningPreference, distance, budget, cuisine } = req.body;
+        const { city, country } = await getCityAndCountry(lat, lng);
         const prompt = `
             You are a restaurant recommendation assistant.
             A user is located at latitude ${lat}, longitude ${lng}, which is in ${city}, ${country}.
