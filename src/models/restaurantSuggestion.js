@@ -10,7 +10,7 @@ const RestaurantSuggestionSchema = new Schema({
     longitude: { type: Number },
     diningPreference: { type: String },
     distance: { type: String },
-    budget: { type: String },
+    budget: { type: [String] },
     cuisine: { type: String },
     requestDetails: {
         type: String

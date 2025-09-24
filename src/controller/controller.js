@@ -300,12 +300,14 @@ exports.getSuggestedRestaurant = async (req, res) => {
     try {
         const { lat, lng, diningPreference, distance, budget, cuisine, email } = req.body;
         const { city, country } = await getCityAndCountry(lat, lng);
+        const budgetString = Array.isArray(budget) && budget.length > 0 ? budget.join(', ') : 'any';
+
         const requestDetails = {
             latitude: lat,
             longitude: lng,
             diningPreference: diningPreference || 'any',
             distance: distance || 'any',
-            budget: budget || 'any',
+            budget: budget || ['any'],
             cuisine: cuisine,
             email: email || null,
             city: city,
@@ -315,35 +317,33 @@ exports.getSuggestedRestaurant = async (req, res) => {
         const prompt = `
             You are a restaurant recommendation assistant.
             A user is located at latitude ${lat}, longitude ${lng}, which is in ${city}, ${country}.
-            They want a ${cuisine} restaurant in ${city}, ${country}.
-            Dining preference: ${diningPreference || "any"}.
-            Budget: ${budget || "any"}.
-            Distance: ${distance || "any"}.
+            They are looking for a ${cuisine} restaurant.
 
-            Please suggest ONE real restaurant located specifically in ${city}, ${country}.
-            Do NOT return multiple locations, general descriptions, or suggestions like "various places".
-            Always return ONE real restaurant with a valid street address.
+            User preferences:
+            - Dining preference: ${diningPreference || "any"}
+            - Acceptable budget ranges: ${budgetString}
+            - Distance: ${distance || "any"}
 
-            Include:
-            - name
-            - full street address (not a region or multiple locations)
-            - approximate rating
-            - phone number (if available, otherwise "Not available")
-            - official website (if available, otherwise "Not available")
-            - one popular ${cuisine} dish likely served there
-            - a short 2–3 sentence description of the restaurant
+            Strict requirements for the suggestion:
+            1.  The restaurant must be a real, verifiable establishment located in ${city}, ${country}.
+            2.  The rating must be 4.0 or higher.
+            3.  It must have more than 100 reviews.
+            4.  It must have a valid, working phone number. Do not return "Not available".
+            5.  It must have an official, working website. Do not return "Not available".
 
-            Respond ONLY in raw JSON (no markdown, no explanation) with this structure:
+            Please suggest EXACTLY ONE restaurant that meets ALL of these strict criteria. If you cannot find a restaurant that meets all requirements, do not suggest anything.
+
+            Respond ONLY in raw JSON (no markdown, no explanation) with the following structure:
             {
                 "name": "Restaurant name",
                 "address": "Full street address",
                 "rating": "4.5",
                 "cuisine": "${cuisine}",
-                "priceRange": "${budget || "any"}",
+                "priceRange": "${budgetString}",
                 "diningOption": "${diningPreference || "any"}",
                 "selectedFood": "Dish name",
                 "website": "https://restaurant-website.com",
-                "phone": "+92-300-1234567",
+                "phone": "+1-555-123-4567",
                 "description": "A short description of the restaurant"
             }
             `;
@@ -373,7 +373,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
             longitude: lng,
             diningPreference: diningPreference || null,
             distance: distance || null,
-            budget: budget || null,
+            budget: budget && budget.length > 0 ? budget : null,
             cuisine: cuisine,
             requestDetails: JSON.stringify(requestDetails),
             result: JSON.stringify(restaurantData)
