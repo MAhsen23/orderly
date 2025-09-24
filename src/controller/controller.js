@@ -396,11 +396,17 @@ exports.getRestaurantSuggestions = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
+        const { email } = req.query;
 
-        const totalCount = await RestaurantSuggestion.countDocuments();
+        const filter = {};
+        if (email) {
+            filter.email = email;
+        }
+
+        const totalCount = await RestaurantSuggestion.countDocuments(filter);
         const totalPages = Math.ceil(totalCount / limit);
 
-        const suggestions = await RestaurantSuggestion.find()
+        const suggestions = await RestaurantSuggestion.find(filter)
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
