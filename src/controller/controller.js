@@ -314,7 +314,28 @@ exports.getSuggestedRestaurant = async (req, res) => {
             country: country,
             timestamp: new Date().toISOString()
         };
-        const prompt = `
+
+        const makeApiCall = async (prompt) => {
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const result = await model.generateContent(prompt);
+            let text = result.response.text().trim();
+
+            if (text.startsWith("```")) {
+                text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+            }
+
+            try {
+                const data = JSON.parse(text);
+                if (data.name && data.address) {
+                    return data;
+                }
+                return null;
+            } catch (e) {
+                return null;
+            }
+        };
+
+        const strictPrompt = `
             You are a restaurant recommendation assistant.
             A user is located at latitude ${lat}, longitude ${lng}, which is in ${city}, ${country}.
             They are looking for a ${cuisine} restaurant.
@@ -331,7 +352,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
             4.  It must have a valid, working phone number. Do not return "Not available".
             5.  It must have an official, working website. Do not return "Not available".
 
-            Please suggest EXACTLY ONE restaurant that meets ALL of these strict criteria. If you cannot find a restaurant that meets all requirements, do not suggest anything.
+            Please suggest EXACTLY ONE restaurant that meets ALL of these strict criteria.
 
             Respond ONLY in raw JSON (no markdown, no explanation) with the following structure:
             {
@@ -348,26 +369,44 @@ exports.getSuggestedRestaurant = async (req, res) => {
             }
             `;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent(prompt);
-        let text = result.response.text().trim();
+        let restaurantData = await makeApiCall(strictPrompt);
 
-        if (text.startsWith("```")) {
-            text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+        if (!restaurantData) {
+            const relaxedPrompt = `
+                You are a restaurant recommendation assistant. A user's initial search returned no results. Please try again with more flexible criteria.
+                The user is located at latitude ${lat}, longitude ${lng}, in ${city}, ${country}. They are looking for a ${cuisine} restaurant.
+
+                Original preferences (these can be relaxed):
+                - Dining preference: ${diningPreference || "any"}
+                - Budget: ${budgetString}
+                - Distance: ${distance || "any"}
+
+                Relaxed search instructions:
+                1. Find the best possible match even if it doesn't perfectly fit the budget or distance.
+                2. Slightly expand the search radius or consider adjacent budget categories if no direct match is found.
+
+                Strict requirements that CANNOT be relaxed:
+                1. The restaurant must be a real, verifiable establishment in ${city}, ${country}.
+                2. The rating must be 4.0 or higher.
+                3. It must have more than 100 reviews.
+                4. It must have a valid, working phone number.
+                5. It must have an official, working website.
+
+                Please suggest EXACTLY ONE restaurant that meets the strict requirements, even if it deviates from the original preferences.
+
+                Respond ONLY in raw JSON (no markdown, no explanation) with the same structure as before.
+                `;
+            restaurantData = await makeApiCall(relaxedPrompt);
         }
 
-        let restaurantData;
-        try {
-            restaurantData = JSON.parse(text);
-        } catch (e) {
-            return res.status(500).json({
+        if (!restaurantData) {
+            return res.status(404).json({
                 success: false,
-                message: "Failed to parse Gemini response",
-                raw: text,
+                message: "We couldn't find a suitable restaurant that meets our quality standards, even with a broader search. Please try different criteria.",
             });
         }
 
-        restaurantSuggestionData = new RestaurantSuggestion({
+        const restaurantSuggestionData = new RestaurantSuggestion({
             email: email || 'anonymous@unknown.com',
             latitude: lat,
             longitude: lng,
