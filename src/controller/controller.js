@@ -359,6 +359,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
                 "name": "Restaurant name",
                 "address": "Full street address",
                 "rating": "4.5",
+                "reviewCount": "Number of reviews (e.g., 250+)",
                 "cuisine": "${cuisine}",
                 "priceRange": "${budgetString}",
                 "diningOption": "${diningPreference || "any"}",
