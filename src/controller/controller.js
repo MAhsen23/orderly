@@ -301,6 +301,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
         const { lat, lng, diningPreference, distance, budget, cuisine, email, includeChains } = req.body;
         const { city, country } = await getCityAndCountry(lat, lng);
         const budgetString = Array.isArray(budget) && budget.length > 0 ? budget.join(', ') : 'any';
+        const chainInstruction = `Regarding chain restaurants: ${includeChains ? "well-known chain restaurants are acceptable suggestions." : "exclude well-known national or international chain restaurants from the suggestions."}`;
 
         const requestDetails = {
             latitude: lat,
@@ -309,6 +310,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
             distance: distance || 'any',
             budget: budget || ['any'],
             cuisine: cuisine,
+            includeChains: includeChains || false,
             email: email || null,
             city: city,
             country: country,
@@ -344,6 +346,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
             - Dining preference: ${diningPreference || "any"}
             - Acceptable budget ranges: ${budgetString}
             - Distance: ${distance || "any"}
+            - ${chainInstruction}
 
             Strict requirements for the suggestion:
             1.  The restaurant must be a real, verifiable establishment located in ${city}, ${country}.
@@ -352,10 +355,36 @@ exports.getSuggestedRestaurant = async (req, res) => {
             4.  It must have a valid, working phone number. Do not return "Not available".
             5.  It must have an official, working website. Do not return "Not available".
 
-            Please suggest EXACTLY ONE restaurant that meets ALL of these strict criteria.
+            ${includeChains
+                ? `Please suggest one primary restaurant that is the best match for the user's criteria. This can be an independent restaurant or a chain. Additionally, provide a list of 2-3 alternative popular chain restaurants that also match the cuisine type and are located nearby.`
+                : `Please suggest EXACTLY ONE restaurant that meets ALL of these strict criteria.`
+            }
 
             Respond ONLY in raw JSON (no markdown, no explanation) with the following structure:
-            {
+            ${includeChains
+                ? `{
+                "mainSuggestion": {
+                    "name": "Restaurant name",
+                    "address": "Full street address",
+                    "rating": "4.5",
+                    "reviewCount": "Number of reviews (e.g., 250+)",
+                    "cuisine": "${cuisine}",
+                    "priceRange": "${budgetString}",
+                    "diningOption": "${diningPreference || "any"}",
+                    "selectedFood": "Dish name",
+                    "website": "https://restaurant-website.com",
+                    "phone": "+1-555-123-4567",
+                    "description": "A short description of the restaurant"
+                },
+                "chainAlternatives": [
+                    {
+                        "name": "Chain Restaurant Name",
+                        "address": "Full street address",
+                        "cuisine": "${cuisine}"
+                    }
+                ]
+            }`
+                : `{
                 "name": "Restaurant name",
                 "address": "Full street address",
                 "rating": "4.5",
@@ -367,6 +396,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
                 "website": "https://restaurant-website.com",
                 "phone": "+1-555-123-4567",
                 "description": "A short description of the restaurant"
+            }`
             }
             `;
 
@@ -381,6 +411,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
                 - Dining preference: ${diningPreference || "any"}
                 - Budget: ${budgetString}
                 - Distance: ${distance || "any"}
+                - ${chainInstruction}
 
                 Relaxed search instructions:
                 1. Find the best possible match even if it doesn't perfectly fit the budget or distance.
@@ -415,6 +446,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
             distance: distance || null,
             budget: budget && budget.length > 0 ? budget : null,
             cuisine: cuisine,
+            includeChains: includeChains || false,
             requestDetails: JSON.stringify(requestDetails),
             result: JSON.stringify(restaurantData)
         });
