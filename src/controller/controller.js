@@ -302,7 +302,6 @@ exports.getSuggestedRestaurant = async (req, res) => {
         const { city, country } = await getCityAndCountry(lat, lng);
         const budgetString = Array.isArray(budget) && budget.length > 0 ? budget.join(', ') : 'any';
         const chainInstruction = `Regarding chain restaurants: ${includeChains ? "well-known chain restaurants are acceptable suggestions." : "exclude well-known national or international chain restaurants from the suggestions."}`;
-
         const requestDetails = {
             latitude: lat,
             longitude: lng,
@@ -328,7 +327,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
 
             try {
                 const data = JSON.parse(text);
-                if (data.name && data.address) {
+                if ((data.name && data.address) || (data.mainSuggestion && data.mainSuggestion.name && data.mainSuggestion.address)) {
                     return data;
                 }
                 return null;
@@ -424,7 +423,10 @@ exports.getSuggestedRestaurant = async (req, res) => {
                 4. It must have a valid, working phone number.
                 5. It must have an official, working website.
 
-                Please suggest EXACTLY ONE restaurant that meets the strict requirements, even if it deviates from the original preferences.
+                ${includeChains
+                    ? `Please suggest one primary restaurant that is the best match, even if it deviates from the original preferences. Also provide 2-3 alternative popular chain restaurants.`
+                    : `Please suggest EXACTLY ONE restaurant that meets the strict requirements, even if it deviates from the original preferences.`
+                }
 
                 Respond ONLY in raw JSON (no markdown, no explanation) with the same structure as before.
                 `;
@@ -453,11 +455,20 @@ exports.getSuggestedRestaurant = async (req, res) => {
 
         await restaurantSuggestionData.save();
 
-        res.status(200).json({
-            success: true,
-            restaurant: restaurantData,
-            suggestionId: restaurantSuggestionData._id
-        });
+        if (includeChains && restaurantData.mainSuggestion) {
+            res.status(200).json({
+                success: true,
+                restaurant: restaurantData.mainSuggestion,
+                chainAlternatives: restaurantData.chainAlternatives,
+                suggestionId: restaurantSuggestionData._id
+            });
+        } else {
+            res.status(200).json({
+                success: true,
+                restaurant: restaurantData,
+                suggestionId: restaurantSuggestionData._id
+            });
+        }
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
