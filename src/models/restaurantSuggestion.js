@@ -12,6 +12,10 @@ const RestaurantSuggestionSchema = new Schema({
     distance: { type: String },
     budget: { type: [String] },
     cuisine: { type: String },
+    includeChains: {
+        type: Boolean,
+        default: false
+    },
     requestDetails: {
         type: String
     },

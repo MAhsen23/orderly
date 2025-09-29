@@ -298,9 +298,10 @@ async function getCityAndCountry(lat, lng) {
 
 exports.getSuggestedRestaurant = async (req, res) => {
     try {
-        const { lat, lng, diningPreference, distance, budget, cuisine, email } = req.body;
+        const { lat, lng, diningPreference, distance, budget, cuisine, email, includeChains } = req.body;
         const { city, country } = await getCityAndCountry(lat, lng);
         const budgetString = Array.isArray(budget) && budget.length > 0 ? budget.join(', ') : 'any';
+        const chainInstruction = `Regarding chain restaurants: ${includeChains ? "well-known chain restaurants are acceptable suggestions." : "exclude well-known national or international chain restaurants from the suggestions."}`;
 
         const requestDetails = {
             latitude: lat,
@@ -309,6 +310,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
             distance: distance || 'any',
             budget: budget || ['any'],
             cuisine: cuisine,
+            includeChains: includeChains || false,
             email: email || null,
             city: city,
             country: country,
@@ -344,6 +346,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
             - Dining preference: ${diningPreference || "any"}
             - Acceptable budget ranges: ${budgetString}
             - Distance: ${distance || "any"}
+            - ${chainInstruction}
 
             Strict requirements for the suggestion:
             1.  The restaurant must be a real, verifiable establishment located in ${city}, ${country}.
@@ -381,6 +384,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
                 - Dining preference: ${diningPreference || "any"}
                 - Budget: ${budgetString}
                 - Distance: ${distance || "any"}
+                - ${chainInstruction}
 
                 Relaxed search instructions:
                 1. Find the best possible match even if it doesn't perfectly fit the budget or distance.
@@ -415,6 +419,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
             distance: distance || null,
             budget: budget && budget.length > 0 ? budget : null,
             cuisine: cuisine,
+            includeChains: includeChains || false,
             requestDetails: JSON.stringify(requestDetails),
             result: JSON.stringify(restaurantData)
         });
