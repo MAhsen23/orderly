@@ -214,69 +214,6 @@ exports.notes = async (req, res) => {
     }
 };
 
-
-/*export const getSuggestedRestaurant = async (req, res) => {
-    try {
-        const { lat, lng, diningPreference, distance, budget, cuisine } = req.body;
-        const distanceMap = {
-            walkable: 500,
-            "1mile": 1600,
-            "3mile": 4800,
-            "5mile": 8000,
-            "10mile": 16000,
-        };
-        const radius = distanceMap[distance] || 3000;
-        const budgetMap = {
-            "under15": 1,
-            "15-30": 2,
-            "30-60": 3,
-            "60-100": 4,
-        };
-
-        const apiUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=restaurant&keyword=${encodeURIComponent(cuisine)}&key=${process.env.GOOGLE_PLACES_KEY}`;
-        const resp = await fetch(apiUrl);
-        const data = await resp.json();
-
-        if (!data.results || data.results.length === 0) {
-            return res.status(404).json({ success: false, message: "No restaurants found for this cuisine" });
-        }
-
-        let filtered = data.results;
-        if (budget) {
-            filtered = filtered.filter(r => r.price_level === budgetMap[budget]);
-        }
-
-        if (filtered.length === 0) {
-            return res.status(404).json({ sucess: false, message: "No restaurants found for this cuisine and budget" });
-        }
-
-        const randomRestaurant = filtered[Math.floor(Math.random() * filtered.length)];
-        const prompt = `Give me one popular ${cuisine} dish that is most likely served at the restaurant "${randomRestaurant.name}" located in ${randomRestaurant.vicinity}. 
-        Return only the dish name, nothing else.`;
-
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-        const result = await model.generateContent(prompt);
-        const selectedFood = result.response.text().trim();
-
-        res.status(200).json({
-            sucess: true,
-            restaurant: {
-                name: randomRestaurant.name,
-                address: randomRestaurant.vicinity,
-                rating: randomRestaurant.rating,
-                cuisine,
-                priceRange: budget,
-                diningOption: diningPreference,
-            },
-            selectedFood,
-        });
-
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-};
-*/
-
 async function getCityAndCountry(lat, lng) {
     const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`;
 
@@ -294,6 +231,27 @@ async function getCityAndCountry(lat, lng) {
         "Unknown";
     const country = data.address.country || "Unknown";
     return { city, country };
+}
+
+async function isWebsiteActive(url) {
+    if (!url || !url.startsWith('http')) {
+        return false;
+    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    try {
+        const response = await fetch(url, {
+            method: 'HEAD',
+            signal: controller.signal,
+            redirect: 'follow',
+        });
+        clearTimeout(timeoutId);
+        return response.ok;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        return false;
+    }
 }
 
 exports.getSuggestedRestaurant = async (req, res) => {
@@ -327,7 +285,13 @@ exports.getSuggestedRestaurant = async (req, res) => {
 
             try {
                 const data = JSON.parse(text);
-                if ((data.name && data.address) || (data.mainSuggestion && data.mainSuggestion.name && data.mainSuggestion.address)) {
+                const suggestion = data.mainSuggestion || data;
+
+                if (suggestion && suggestion.name && suggestion.address) {
+                    const isActive = await isWebsiteActive(suggestion.website);
+                    if (!isActive) {
+                        suggestion.website = "Not active";
+                    }
                     return data;
                 }
                 return null;
@@ -475,214 +439,6 @@ exports.getSuggestedRestaurant = async (req, res) => {
         }
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
-    }
-};
-
-exports.getSuggestedRestaurantKimi = async (req, res) => {
-    try {
-        const { lat, lng, diningPreference, distance, budget, cuisine, email, includeChains } = req.body;
-        const { city, country } = await getCityAndCountry(lat, lng);
-        const budgetString = Array.isArray(budget) && budget.length > 0 ? budget.join(', ') : 'any';
-        const chainInstruction = `Regarding chain restaurants: ${includeChains ? "well-known chain restaurants are acceptable suggestions." : "exclude well-known national or international chain restaurants from the suggestions."}`;
-
-        const requestDetails = {
-            latitude: lat,
-            longitude: lng,
-            diningPreference: diningPreference || 'any',
-            distance: distance || 'any',
-            budget: budget || ['any'],
-            cuisine: cuisine,
-            includeChains: includeChains || false,
-            email: email || null,
-            city: city,
-            country: country,
-            timestamp: new Date().toISOString()
-        };
-
-        const makeApiCall = async (prompt) => {
-            const payload = {
-                model: "moonshotai/kimi-k2:free",
-                messages: [
-                    {
-                        role: "user",
-                        content: prompt
-                    }
-                ]
-            };
-
-            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${process.env.KIMIK2_API_KEY}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                return null;
-            }
-
-            const data = await response.json();
-            let text = data.choices[0].message.content.trim();
-
-            if (text.startsWith("```")) {
-                text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-            }
-
-            try {
-                const jsonData = JSON.parse(text);
-                if ((jsonData.name && jsonData.address) || (jsonData.mainSuggestion && jsonData.mainSuggestion.name && jsonData.mainSuggestion.address)) {
-                    return jsonData;
-                }
-                return null;
-            } catch (e) {
-                return null;
-            }
-        };
-
-        const strictPrompt = `
-            You are a restaurant recommendation assistant.
-            A user is located at latitude ${lat}, longitude ${lng}, which is in ${city}, ${country}.
-            They are looking for a ${cuisine} restaurant.
-
-            User preferences:
-            - Dining preference: ${diningPreference || "any"}
-            - Acceptable budget ranges: ${budgetString}
-            - Distance: ${distance || "any"}
-            - ${chainInstruction}
-
-            Strict requirements for the suggestion:
-            1.  The restaurant must be a real, verifiable establishment located in ${city}, ${country}.
-            2.  The rating must be 4.0 or higher.
-            3.  It must have more than 100 reviews.
-            4.  It must have a valid, working phone number. Do not return "Not available".
-            5.  It must have an official, working, and accessible website. Please verify the URL is correct and not a broken link.
-            6.  The restaurant must be open for business at the current time of this request.
-
-            ${includeChains
-                ? `Please suggest one primary restaurant that is the best match for the user's criteria. This can be an independent restaurant or a chain. Additionally, provide a list of 2-3 alternative popular chain restaurants that also match the cuisine type and are located nearby.`
-                : `Please suggest EXACTLY ONE restaurant that meets ALL of these strict criteria.`
-            }
-
-            Respond ONLY in raw JSON (no markdown, no explanation) with the following structure:
-            ${includeChains
-                ? `{
-                "mainSuggestion": {
-                    "name": "Restaurant name",
-                    "address": "Full street address",
-                    "rating": "4.5",
-                    "reviewCount": "Number of reviews (e.g., 250+)",
-                    "cuisine": "${cuisine}",
-                    "priceRange": "${budgetString}",
-                    "diningOption": "${diningPreference || "any"}",
-                    "selectedFood": "Dish name",
-                    "website": "https://restaurant-website.com",
-                    "phone": "+1-555-123-4567",
-                    "description": "A short description of the restaurant",
-                    "isOpen": true
-                },
-                "chainAlternatives": [
-                    {
-                        "name": "Chain Restaurant Name",
-                        "address": "Full street address",
-                        "cuisine": "${cuisine}"
-                    }
-                ]
-            }`
-                : `{
-                "name": "Restaurant name",
-                "address": "Full street address",
-                "rating": "4.5",
-                "reviewCount": "Number of reviews (e.g., 250+)",
-                "cuisine": "${cuisine}",
-                "priceRange": "${budgetString}",
-                "diningOption": "${diningPreference || "any"}",
-                "selectedFood": "Dish name",
-                "website": "https://restaurant-website.com",
-                "phone": "+1-555-123-4567",
-                "description": "A short description of the restaurant",
-                "isOpen": true
-            }`
-            }
-            `;
-
-        let restaurantData = await makeApiCall(strictPrompt);
-
-        if (!restaurantData) {
-            const relaxedPrompt = `
-                You are a restaurant recommendation assistant. A user's initial search returned no results. Please try again with more flexible criteria.
-                The user is located at latitude ${lat}, longitude ${lng}, in ${city}, ${country}. They are looking for a ${cuisine} restaurant.
-
-                Original preferences (these can be relaxed):
-                - Dining preference: ${diningPreference || "any"}
-                - Budget: ${budgetString}
-                - Distance: ${distance || "any"}
-                - ${chainInstruction}
-
-                Relaxed search instructions:
-                1. Find the best possible match even if it doesn't perfectly fit the budget or distance.
-                2. Strongly prefer restaurants that are open for business at the current time.
-                3. Slightly expand the search radius or consider adjacent budget categories if no direct match is found.
-
-                Strict requirements that CANNOT be relaxed:
-                1. The restaurant must be a real, verifiable establishment in ${city}, ${country}.
-                2. The rating must be 4.0 or higher.
-                3. It must have more than 100 reviews.
-                4. It must have a valid, working phone number.
-                5. It must have an official, working, and accessible website. Please verify the URL.
-
-                ${includeChains
-                    ? `Please suggest one primary restaurant that is the best match, even if it deviates from the original preferences. Also provide 2-3 alternative popular chain restaurants.`
-                    : `Please suggest EXACTLY ONE restaurant that meets the strict requirements, even if it deviates from the original preferences.`
-                }
-
-                Respond ONLY in raw JSON (no markdown, no explanation) with the same structure as before.
-                `;
-            restaurantData = await makeApiCall(relaxedPrompt);
-        }
-
-        if (!restaurantData) {
-            return res.status(404).json({
-                success: false,
-                message: "We couldn't find a suitable restaurant that meets our quality standards, even with a broader search. Please try different criteria.",
-            });
-        }
-
-        const restaurantSuggestionData = new RestaurantSuggestion({
-            email: email || 'anonymous@unknown.com',
-            latitude: lat,
-            longitude: lng,
-            diningPreference: diningPreference || null,
-            distance: distance || null,
-            budget: budget && budget.length > 0 ? budget : null,
-            cuisine: cuisine,
-            includeChains: includeChains || false,
-            requestDetails: JSON.stringify(requestDetails),
-            result: JSON.stringify(restaurantData)
-        });
-
-        await restaurantSuggestionData.save();
-
-        if (includeChains && restaurantData.mainSuggestion) {
-            res.status(200).json({
-                success: true,
-                restaurant: restaurantData.mainSuggestion,
-                chainAlternatives: restaurantData.chainAlternatives,
-                suggestionId: restaurantSuggestionData._id
-            });
-        } else {
-            res.status(200).json({
-                success: true,
-                restaurant: restaurantData,
-                suggestionId: restaurantSuggestionData._id
-            });
-        }
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
     }
 };
 
