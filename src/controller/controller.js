@@ -436,6 +436,33 @@ exports.getSuggestedRestaurant = async (req, res) => {
     }
 };
 
+exports.checkWebsiteStatus = async (req, res) => {
+    try {
+        const { url } = req.body;
+
+        if (!url) {
+            return res.status(400).json({
+                success: false,
+                message: "URL is required in the request body.",
+            });
+        }
+
+        const isActive = await isWebsiteActive(url);
+
+        res.status(200).json({
+            success: true,
+            url: url,
+            isActive: isActive,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Failed to check website status.",
+            error: error.message,
+        });
+    }
+};
+
 exports.getRestaurantSuggestions = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
