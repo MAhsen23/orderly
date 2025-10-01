@@ -352,7 +352,8 @@ exports.getSuggestedRestaurant = async (req, res) => {
             2.  The rating must be 4.0 or higher.
             3.  It must have more than 100 reviews.
             4.  It must have a valid, working phone number. Do not return "Not available".
-            5.  It must have an official, working website. Do not return "Not available".
+            5.  It must have an official, working, and accessible website. Please verify the URL is correct and not a broken link.
+            6.  The restaurant must be open for business at the current time of this request.
 
             ${includeChains
                 ? `Please suggest one primary restaurant that is the best match for the user's criteria. This can be an independent restaurant or a chain. Additionally, provide a list of 2-3 alternative popular chain restaurants that also match the cuisine type and are located nearby.`
@@ -373,7 +374,8 @@ exports.getSuggestedRestaurant = async (req, res) => {
                     "selectedFood": "Dish name",
                     "website": "https://restaurant-website.com",
                     "phone": "+1-555-123-4567",
-                    "description": "A short description of the restaurant"
+                    "description": "A short description of the restaurant",
+                    "isOpen": true
                 },
                 "chainAlternatives": [
                     {
@@ -394,7 +396,8 @@ exports.getSuggestedRestaurant = async (req, res) => {
                 "selectedFood": "Dish name",
                 "website": "https://restaurant-website.com",
                 "phone": "+1-555-123-4567",
-                "description": "A short description of the restaurant"
+                "description": "A short description of the restaurant",
+                "isOpen": true
             }`
             }
             `;
@@ -414,14 +417,15 @@ exports.getSuggestedRestaurant = async (req, res) => {
 
                 Relaxed search instructions:
                 1. Find the best possible match even if it doesn't perfectly fit the budget or distance.
-                2. Slightly expand the search radius or consider adjacent budget categories if no direct match is found.
+                2. Strongly prefer restaurants that are open for business at the current time.
+                3. Slightly expand the search radius or consider adjacent budget categories if no direct match is found.
 
                 Strict requirements that CANNOT be relaxed:
                 1. The restaurant must be a real, verifiable establishment in ${city}, ${country}.
                 2. The rating must be 4.0 or higher.
                 3. It must have more than 100 reviews.
                 4. It must have a valid, working phone number.
-                5. It must have an official, working website.
+                5. It must have an official, working, and accessible website. Please verify the URL.
 
                 ${includeChains
                     ? `Please suggest one primary restaurant that is the best match, even if it deviates from the original preferences. Also provide 2-3 alternative popular chain restaurants.`
