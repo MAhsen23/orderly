@@ -285,13 +285,7 @@ exports.getSuggestedRestaurant = async (req, res) => {
 
             try {
                 const data = JSON.parse(text);
-                const suggestion = data.mainSuggestion || data;
-
-                if (suggestion && suggestion.name && suggestion.address) {
-                    const isActive = await isWebsiteActive(suggestion.website);
-                    if (!isActive) {
-                        suggestion.website = "Not active";
-                    }
+                if ((data.name && data.address) || (data.mainSuggestion && data.mainSuggestion.name && data.mainSuggestion.address)) {
                     return data;
                 }
                 return null;
