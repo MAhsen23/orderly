@@ -522,32 +522,43 @@ exports.getRestaurantSuggestions = async (req, res) => {
 
 exports.planRoadTrip = async (req, res) => {
     try {
-        const { start, end, numStops, activity, duration, costPreference } = req.body;
+        const { start, end, numberOfStops, stopDuration, activity, costPreference } = req.body;
 
-        if (!start || !end || !numStops || !activity || !duration || !costPreference) {
+        if (!start || !end || !numberOfStops || !stopDuration || !activity || !costPreference) {
             return res.status(400).json({
                 success: false,
-                message: 'All fields (start, end, numStops, activity, duration, costPreference) are required.',
+                message: 'All fields (start, end, numberOfStops, stopDuration, activity, costPreference) are required.',
             });
         }
 
         const stopCountMapping = {
-            "1-2": "one or two",
-            "3-5": "three to five",
-            "6-8": "six to eight",
+            "few": "one or two",
+            "some": "three to five",
+            "alot": "six to eight",
+        };
+
+        const durationMapping = {
+            "short": "less than 1 hour",
+            "medium": "1 to 3 hours",
+            "long": "more than 3 hours",
+        };
+
+        const activityMapping = {
+            "light": "relaxing activities like scenic viewpoints, cafes, or easy walks",
+            "medium": "moderate activities like museum visits, city exploration, or light hiking",
+            "heavy": "strenuous activities like long hikes, sports, or adventure parks",
         };
 
         const costMapping = {
-            "free": "free activities or attractions",
-            "affordable": "attractions with low admission fees (e.g., under $20 per person)",
-            "moderate": "activities with moderate costs",
-            "any": "any cost is acceptable",
+            "free": "only free activities or attractions",
+            "mix": "any cost is acceptable, from free to paid",
+            "paid": "activities with admission fees are preferred",
         };
 
-        if (!stopCountMapping[numStops] || !costMapping[costPreference]) {
+        if (!stopCountMapping[numberOfStops] || !durationMapping[stopDuration] || !activityMapping[activity] || !costMapping[costPreference]) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid value for numStops or costPreference.',
+                message: 'Invalid value for one of the input fields.',
             });
         }
 
@@ -556,9 +567,9 @@ exports.planRoadTrip = async (req, res) => {
     
           1.  **Identify the Main Route:** First, determine the single fastest driving route from "${start}" to "${end}" using major highways (like Google Maps' default route). Announce the main highways (e.g., "The route primarily follows I-95 N and I-80 E").
     
-          2.  **Find & Verify Stops:** Find ${stopCountMapping[numStops]} **UNIQUE AND DISTINCT** stops that are geographically ordered along this main route. **DO NOT repeat the same stop.** For each potential stop, you MUST:
+          2.  **Find & Verify Stops:** Find ${stopCountMapping[numberOfStops]} **UNIQUE AND DISTINCT** stops that are geographically ordered along this main route. **DO NOT repeat the same stop.** For each potential stop, you MUST:
               a.  Verify it is currently open and operating as of 2024.
-              b.  Verify it meets the user's preferences for activity (${activity}), duration (${duration}), and cost (${costMapping[costPreference]}).
+              b.  Verify it meets the user's preferences for activity (${activityMapping[activity]}), duration (${durationMapping[stopDuration]}), and cost (${costMapping[costPreference]}).
               c.  **Verify the website URL is working and active** - do NOT include dead links, 404 errors, or non-functional websites. Only include verified working websites.
               d.  **Calculate the round-trip detour time in minutes** from the main highway, to the stop, and back to the highway. This is the 'detour_time_minutes'.
     
@@ -590,7 +601,7 @@ exports.planRoadTrip = async (req, res) => {
                   "name": "Name of the stop",
                   "location": "City, State",
                   "description": "A brief description of the stop.",
-                  "activity_type": "${activity}",
+                  "activity": "${activity}",
                   "detour_time_minutes": 15,
                   "website": "https://example.com"
                 }
@@ -626,7 +637,7 @@ exports.planRoadTrip = async (req, res) => {
 
 exports.planRoadTripWithGrok = async (req, res) => {
     try {
-        const { start, end, numStops, activity, duration, costPreference } = req.body;
+        const { start, end, numberOfStops, stopDuration, activity, costPreference } = req.body;
 
         if (!process.env.GROK_API_KEY) {
             return res.status(500).json({
@@ -635,30 +646,41 @@ exports.planRoadTripWithGrok = async (req, res) => {
             });
         }
 
-        if (!start || !end || !numStops || !activity || !duration || !costPreference) {
+        if (!start || !end || !numberOfStops || !stopDuration || !activity || !costPreference) {
             return res.status(400).json({
                 success: false,
-                message: 'All fields (start, end, numStops, activity, duration, costPreference) are required.',
+                message: 'All fields (start, end, numberOfStops, stopDuration, activity, costPreference) are required.',
             });
         }
 
         const stopCountMapping = {
-            "1-2": "one or two",
-            "3-5": "three to five",
-            "6-8": "six to eight",
+            "few": "one or two",
+            "some": "three to five",
+            "alot": "six to eight",
+        };
+
+        const durationMapping = {
+            "short": "less than 1 hour",
+            "medium": "1 to 3 hours",
+            "long": "more than 3 hours",
+        };
+
+        const activityMapping = {
+            "light": "relaxing activities like scenic viewpoints, cafes, or easy walks",
+            "medium": "moderate activities like museum visits, city exploration, or light hiking",
+            "heavy": "strenuous activities like long hikes, sports, or adventure parks",
         };
 
         const costMapping = {
-            "free": "free activities or attractions",
-            "affordable": "attractions with low admission fees (e.g., under $20 per person)",
-            "moderate": "activities with moderate costs",
-            "any": "any cost is acceptable",
+            "free": "only free activities or attractions",
+            "mix": "any cost is acceptable, from free to paid",
+            "paid": "activities with admission fees are preferred",
         };
 
-        if (!stopCountMapping[numStops] || !costMapping[costPreference]) {
+        if (!stopCountMapping[numberOfStops] || !durationMapping[stopDuration] || !activityMapping[activity] || !costMapping[costPreference]) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid value for numStops or costPreference.',
+                message: 'Invalid value for one of the input fields.',
             });
         }
 
@@ -667,9 +689,9 @@ exports.planRoadTripWithGrok = async (req, res) => {
     
           1.  **Identify the Main Route:** First, determine the single fastest driving route from "${start}" to "${end}" using major highways (like Google Maps' default route). Announce the main highways (e.g., "The route primarily follows I-95 N and I-80 E").
     
-          2.  **Find & Verify Stops:** Find ${stopCountMapping[numStops]} **UNIQUE AND DISTINCT** stops that are geographically ordered along this main route. **DO NOT repeat the same stop.** For each potential stop, you MUST:
+          2.  **Find & Verify Stops:** Find ${stopCountMapping[numberOfStops]} **UNIQUE AND DISTINCT** stops that are geographically ordered along this main route. **DO NOT repeat the same stop.** For each potential stop, you MUST:
               a.  Verify it is currently open and operating as of 2024.
-              b.  Verify it meets the user's preferences for activity (${activity}), duration (${duration}), and cost (${costMapping[costPreference]}).
+              b.  Verify it meets the user's preferences for activity (${activityMapping[activity]}), duration (${durationMapping[stopDuration]}), and cost (${costMapping[costPreference]}).
               c.  **Verify the website URL is working and active** - do NOT include dead links, 404 errors, or non-functional websites. Only include verified working websites.
               d.  **Calculate the round-trip detour time in minutes** from the main highway, to the stop, and back to the highway. This is the 'detour_time_minutes'.
     
@@ -701,7 +723,7 @@ exports.planRoadTripWithGrok = async (req, res) => {
                   "name": "Name of the stop",
                   "location": "City, State",
                   "description": "A brief description of the stop.",
-                  "activity_type": "${activity}",
+                  "activity": "${activity}",
                   "detour_time_minutes": 15,
                   "website": "https://example.com"
                 }
@@ -719,7 +741,7 @@ exports.planRoadTripWithGrok = async (req, res) => {
                 'Authorization': `Bearer ${groqApiKey}`,
             },
             body: JSON.stringify({
-                model: 'openai/gpt-oss-20b',
+                model: 'llama3-70b-8192',
                 messages: [{ role: 'user', content: prompt }],
                 response_format: { type: 'json_object' },
             }),
