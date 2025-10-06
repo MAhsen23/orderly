@@ -523,14 +523,12 @@ exports.getRestaurantSuggestions = async (req, res) => {
 exports.planRoadTrip = async (req, res) => {
     try {
         const { start, end, numberOfStops, stopDuration, activity, costPreference } = req.body;
-
         if (!start || !end || !numberOfStops || !stopDuration || !activity || !costPreference) {
             return res.status(400).json({
                 success: false,
                 message: 'All fields (start, end, numberOfStops, stopDuration, activity, costPreference) are required.',
             });
         }
-
         const stopCountMapping = {
             "few": "one or two",
             "some": "three to five",
@@ -683,7 +681,6 @@ exports.planRoadTripWithGrok = async (req, res) => {
                 message: 'Invalid value for one of the input fields.',
             });
         }
-
         const prompt = `
           You are an expert road trip planner. Your primary goal is to find interesting stops along the *fastest driving route* between two points. Follow these rules strictly:
     
@@ -741,20 +738,18 @@ exports.planRoadTripWithGrok = async (req, res) => {
                 'Authorization': `Bearer ${groqApiKey}`,
             },
             body: JSON.stringify({
-                model: 'llama3-70b-8192',
+                model: 'openai/gpt-oss-20b',
                 messages: [{ role: 'user', content: prompt }],
                 response_format: { type: 'json_object' },
             }),
         });
 
         const result = await apiResponse.json();
-
         if (result.error) {
             return res.status(500).json({ success: false, message: result.error.message });
         }
 
         let text = result.choices[0]?.message?.content.trim();
-
         if (!text) {
             return res.status(500).json({ success: false, message: "Received empty response from Groq API." });
         }
@@ -775,7 +770,6 @@ exports.planRoadTripWithGrok = async (req, res) => {
                 message: "Failed to parse the road trip plan from Groq API.",
             });
         }
-
     } catch (error) {
         res.status(500).json({
             success: false,
