@@ -623,3 +623,138 @@ exports.planRoadTrip = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+exports.planRoadTripWithGrok = async (req, res) => {
+    try {
+        const { start, end, numStops, activity, duration, costPreference } = req.body;
+
+        if (!process.env.GROK_API_KEY) {
+            return res.status(500).json({
+                success: false,
+                message: 'GROK_API_KEY is not configured in the environment variables.',
+            });
+        }
+
+        if (!start || !end || !numStops || !activity || !duration || !costPreference) {
+            return res.status(400).json({
+                success: false,
+                message: 'All fields (start, end, numStops, activity, duration, costPreference) are required.',
+            });
+        }
+
+        const stopCountMapping = {
+            "1-2": "one or two",
+            "3-5": "three to five",
+            "6-8": "six to eight",
+        };
+
+        const costMapping = {
+            "free": "free activities or attractions",
+            "affordable": "attractions with low admission fees (e.g., under $20 per person)",
+            "moderate": "activities with moderate costs",
+            "any": "any cost is acceptable",
+        };
+
+        if (!stopCountMapping[numStops] || !costMapping[costPreference]) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid value for numStops or costPreference.',
+            });
+        }
+
+        const prompt = `
+          You are an expert road trip planner. Your primary goal is to find interesting stops along the *fastest driving route* between two points. Follow these rules strictly:
+    
+          1.  **Identify the Main Route:** First, determine the single fastest driving route from "${start}" to "${end}" using major highways (like Google Maps' default route). Announce the main highways (e.g., "The route primarily follows I-95 N and I-80 E").
+    
+          2.  **Find & Verify Stops:** Find ${stopCountMapping[numStops]} **UNIQUE AND DISTINCT** stops that are geographically ordered along this main route. **DO NOT repeat the same stop.** For each potential stop, you MUST:
+              a.  Verify it is currently open and operating as of 2024.
+              b.  Verify it meets the user's preferences for activity (${activity}), duration (${duration}), and cost (${costMapping[costPreference]}).
+              c.  **Verify the website URL is working and active** - do NOT include dead links, 404 errors, or non-functional websites. Only include verified working websites.
+              d.  **Calculate the round-trip detour time in minutes** from the main highway, to the stop, and back to the highway. This is the 'detour_time_minutes'.
+    
+          3.  **Strictly Enforce Detour Limit:** You MUST discard any stop where 'detour_time_minutes' is greater than 30. No exceptions. Find a different stop that is closer to the main route.
+    
+          4.  **Website Verification:** Only include websites that are:
+              - Currently active and accessible
+              - Official websites for the attraction/business
+              - No broken links or 404 errors
+              - If no working website exists, leave the website field empty
+    
+          **CRITICAL OUTPUT REQUIREMENTS:**
+          - Every stop in the list must be **UNIQUE**. No duplicates.
+          - The response MUST include a 'detour_time_minutes' number for every single stop.
+          - Only include verified, working website URLs.
+          - The route must make logical driving sense with no large zigzags or backtracking. All stops must be found ALONG the main travel corridor.
+    
+          Provide a route description, total miles, and total drive time for the main route itself (excluding stops).
+
+          Respond ONLY in raw JSON (no markdown, no explanation) with the following structure:
+            {
+              "route_summary": {
+                "description": "The route primarily follows...",
+                "total_miles": 1200,
+                "total_drive_time": "20 hours"
+              },
+              "stops": [
+                {
+                  "name": "Name of the stop",
+                  "location": "City, State",
+                  "description": "A brief description of the stop.",
+                  "activity_type": "${activity}",
+                  "detour_time_minutes": 15,
+                  "website": "https://example.com"
+                }
+              ]
+            }
+        `;
+
+        const groqApiUrl = 'https://api.groq.com/openai/v1/chat/completions';
+        const groqApiKey = process.env.GROK_API_KEY;
+
+        const apiResponse = await fetch(groqApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${groqApiKey}`,
+            },
+            body: JSON.stringify({
+                model: 'openai/gpt-oss-20b',
+                messages: [{ role: 'user', content: prompt }],
+                response_format: { type: 'json_object' },
+            }),
+        });
+
+        const result = await apiResponse.json();
+
+        if (result.error) {
+            return res.status(500).json({ success: false, message: result.error.message });
+        }
+
+        let text = result.choices[0]?.message?.content.trim();
+
+        if (!text) {
+            return res.status(500).json({ success: false, message: "Received empty response from Groq API." });
+        }
+
+        if (text.startsWith("```")) {
+            text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+        }
+
+        try {
+            const data = JSON.parse(text);
+            res.status(200).json({
+                success: true,
+                data,
+            });
+        } catch (e) {
+            res.status(500).json({
+                success: false,
+                message: "Failed to parse the road trip plan from Groq API.",
+            });
+        }
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
