@@ -522,11 +522,11 @@ exports.getRestaurantSuggestions = async (req, res) => {
 
 exports.planRoadTrip = async (req, res) => {
     try {
-        const { start, end, numberOfStops, stopDuration, activity, costPreference } = req.body;
-        if (!start || !end || !numberOfStops || !stopDuration || !activity || !costPreference) {
+        const { start, end, numberOfStops, stopDuration, activity, costPreference, startCords, endCords } = req.body;
+        if (!start || !end || !numberOfStops || !stopDuration || !activity || !costPreference || !startCords || !endCords) {
             return res.status(400).json({
                 success: false,
-                message: 'All fields (start, end, numberOfStops, stopDuration, activity, costPreference) are required.',
+                message: 'All fields (start, end, numberOfStops, stopDuration, activity, costPreference, startCords, endCords) are required.',
             });
         }
         const stopCountMapping = {
@@ -561,47 +561,74 @@ exports.planRoadTrip = async (req, res) => {
         }
 
         const prompt = `
-          You are an expert road trip planner. Your primary goal is to find interesting stops along the *fastest driving route* between two points. Follow these rules strictly:
+          You are an expert road trip planner. Your primary goal is to find interesting stops and provide a comprehensive trip plan along the *fastest driving route* between two points. Follow these rules strictly:
     
-          1.  **Identify the Main Route:** First, determine the single fastest driving route from "${start}" to "${end}" using major highways (like Google Maps' default route). Announce the main highways (e.g., "The route primarily follows I-95 N and I-80 E").
+          1.  **Identify the Main Route:** First, determine the single fastest driving route from "${start}" (coordinates: ${startCords.lat}, ${startCords.lng}) to "${end}" (coordinates: ${endCords.lat}, ${endCords.lng}) using major highways.
     
           2.  **Find & Verify Stops:** Find ${stopCountMapping[numberOfStops]} **UNIQUE AND DISTINCT** stops that are geographically ordered along this main route. **DO NOT repeat the same stop.** For each potential stop, you MUST:
               a.  Verify it is currently open and operating as of 2024.
               b.  Verify it meets the user's preferences for activity (${activityMapping[activity]}), duration (${durationMapping[stopDuration]}), and cost (${costMapping[costPreference]}).
               c.  **Verify the website URL is working and active** - do NOT include dead links, 404 errors, or non-functional websites. Only include verified working websites.
               d.  **Calculate the round-trip detour time in minutes** from the main highway, to the stop, and back to the highway. This is the 'detour_time_minutes'.
-    
+              e.  Provide the precise latitude and longitude for the stop.
+              f.  Provide a relevant category for the stop (e.g., Landmark, Museum, Park, Restaurant, Viewpoint).
+              g.  Estimate the cost (e.g., Free, $, $$, $$$).
+
           3.  **Strictly Enforce Detour Limit:** You MUST discard any stop where 'detour_time_minutes' is greater than 30. No exceptions. Find a different stop that is closer to the main route.
     
           4.  **Website Verification:** Only include websites that are:
               - Currently active and accessible
               - Official websites for the attraction/business
               - No broken links or 404 errors
-              - If no working website exists, leave the website field empty
-    
+              - If no working website exists, leave the website field as an empty string ""
+
+          5.  **Promotions:** Find 1-2 relevant hotel or restaurant promotions (discounts, special offers) near any of the stops on the itinerary. Verify the promotion is current.
+          
           **CRITICAL OUTPUT REQUIREMENTS:**
           - Every stop in the list must be **UNIQUE**. No duplicates.
           - The response MUST include a 'detour_time_minutes' number for every single stop.
-          - Only include verified, working website URLs.
+          - Only include verified, working website URLs. If none, the field should be an empty string "".
           - The route must make logical driving sense with no large zigzags or backtracking. All stops must be found ALONG the main travel corridor.
     
-          Provide a route description, total miles, and total drive time for the main route itself (excluding stops).
+          Provide a route description, main highways used, total miles, and total drive time for the main route itself (excluding stops).
 
           Respond ONLY in raw JSON (no markdown, no explanation) with the following structure:
             {
-              "route_summary": {
-                "description": "The route primarily follows...",
-                "total_miles": 1200,
-                "total_drive_time": "20 hours"
-              },
+              "start_location": "${start}",
+              "end_location": "${end}",
+              "start_coords": { "latitude": ${startCords.lat}, "longitude": ${startCords.lng} },
+              "end_coords": { "latitude": ${endCords.lat}, "longitude": ${endCords.lng} },
+              "total_drive_miles": 1200,
+              "total_drive_time_hours": "20",
+              "route_description": "A detailed summary of the route, mentioning key landscapes or cities passed.",
+              "main_highways": ["I-95 N", "I-80 E"],
               "stops": [
                 {
                   "name": "Name of the stop",
-                  "location": "City, State",
                   "description": "A brief description of the stop.",
-                  "activity": "${activity}",
-                  "detour_time_minutes": 15,
-                  "website": "https://example.com"
+                  "location": "City, State",
+                  "category": "Landmark",
+                  "latitude": 40.7128,
+                  "longitude": -74.0060,
+                  "website": "https://example.com",
+                  "cost": "$$",
+                  "detour_time_minutes": 15
+                }
+              ],
+              "hotel_promotions": [
+                {
+                  "name": "Hotel Name",
+                  "location": "City, State near a stop",
+                  "offer": "10% off stay",
+                  "booking_url": "https://booking-url.com"
+                }
+              ],
+              "restaurant_promotions": [
+                {
+                  "name": "Restaurant Name",
+                  "location": "City, State near a stop",
+                  "offer": "Free appetizer with entree",
+                  "website": "https://restaurant-url.com"
                 }
               ]
             }
@@ -635,7 +662,7 @@ exports.planRoadTrip = async (req, res) => {
 
 exports.planRoadTripWithGrok = async (req, res) => {
     try {
-        const { start, end, numberOfStops, stopDuration, activity, costPreference } = req.body;
+        const { start, end, numberOfStops, stopDuration, activity, costPreference, startCords, endCords } = req.body;
 
         if (!process.env.GROK_API_KEY) {
             return res.status(500).json({
@@ -644,10 +671,10 @@ exports.planRoadTripWithGrok = async (req, res) => {
             });
         }
 
-        if (!start || !end || !numberOfStops || !stopDuration || !activity || !costPreference) {
+        if (!start || !end || !numberOfStops || !stopDuration || !activity || !costPreference || !startCords || !endCords) {
             return res.status(400).json({
                 success: false,
-                message: 'All fields (start, end, numberOfStops, stopDuration, activity, costPreference) are required.',
+                message: 'All fields (start, end, numberOfStops, stopDuration, activity, costPreference, startCords, endCords) are required.',
             });
         }
 
@@ -682,47 +709,74 @@ exports.planRoadTripWithGrok = async (req, res) => {
             });
         }
         const prompt = `
-          You are an expert road trip planner. Your primary goal is to find interesting stops along the *fastest driving route* between two points. Follow these rules strictly:
+          You are an expert road trip planner. Your primary goal is to find interesting stops and provide a comprehensive trip plan along the *fastest driving route* between two points. Follow these rules strictly:
     
-          1.  **Identify the Main Route:** First, determine the single fastest driving route from "${start}" to "${end}" using major highways (like Google Maps' default route). Announce the main highways (e.g., "The route primarily follows I-95 N and I-80 E").
+          1.  **Identify the Main Route:** First, determine the single fastest driving route from "${start}" (coordinates: ${startCords.lat}, ${startCords.lng}) to "${end}" (coordinates: ${endCords.lat}, ${endCords.lng}) using major highways.
     
           2.  **Find & Verify Stops:** Find ${stopCountMapping[numberOfStops]} **UNIQUE AND DISTINCT** stops that are geographically ordered along this main route. **DO NOT repeat the same stop.** For each potential stop, you MUST:
               a.  Verify it is currently open and operating as of 2024.
               b.  Verify it meets the user's preferences for activity (${activityMapping[activity]}), duration (${durationMapping[stopDuration]}), and cost (${costMapping[costPreference]}).
               c.  **Verify the website URL is working and active** - do NOT include dead links, 404 errors, or non-functional websites. Only include verified working websites.
               d.  **Calculate the round-trip detour time in minutes** from the main highway, to the stop, and back to the highway. This is the 'detour_time_minutes'.
-    
+              e.  Provide the precise latitude and longitude for the stop.
+              f.  Provide a relevant category for the stop (e.g., Landmark, Museum, Park, Restaurant, Viewpoint).
+              g.  Estimate the cost (e.g., Free, $, $$, $$$).
+
           3.  **Strictly Enforce Detour Limit:** You MUST discard any stop where 'detour_time_minutes' is greater than 30. No exceptions. Find a different stop that is closer to the main route.
     
           4.  **Website Verification:** Only include websites that are:
               - Currently active and accessible
               - Official websites for the attraction/business
               - No broken links or 404 errors
-              - If no working website exists, leave the website field empty
-    
+              - If no working website exists, leave the website field as an empty string ""
+
+          5.  **Promotions:** Find 1-2 relevant hotel or restaurant promotions (discounts, special offers) near any of the stops on the itinerary. Verify the promotion is current.
+          
           **CRITICAL OUTPUT REQUIREMENTS:**
           - Every stop in the list must be **UNIQUE**. No duplicates.
           - The response MUST include a 'detour_time_minutes' number for every single stop.
-          - Only include verified, working website URLs.
+          - Only include verified, working website URLs. If none, the field should be an empty string "".
           - The route must make logical driving sense with no large zigzags or backtracking. All stops must be found ALONG the main travel corridor.
     
-          Provide a route description, total miles, and total drive time for the main route itself (excluding stops).
+          Provide a route description, main highways used, total miles, and total drive time for the main route itself (excluding stops).
 
           Respond ONLY in raw JSON (no markdown, no explanation) with the following structure:
             {
-              "route_summary": {
-                "description": "The route primarily follows...",
-                "total_miles": 1200,
-                "total_drive_time": "20 hours"
-              },
+              "start_location": "${start}",
+              "end_location": "${end}",
+              "start_coords": { "latitude": ${startCords.lat}, "longitude": ${startCords.lng} },
+              "end_coords": { "latitude": ${endCords.lat}, "longitude": ${endCords.lng} },
+              "total_drive_miles": 1200,
+              "total_drive_time_hours": "20",
+              "route_description": "A detailed summary of the route, mentioning key landscapes or cities passed.",
+              "main_highways": ["I-95 N", "I-80 E"],
               "stops": [
                 {
                   "name": "Name of the stop",
-                  "location": "City, State",
                   "description": "A brief description of the stop.",
-                  "activity": "${activity}",
-                  "detour_time_minutes": 15,
-                  "website": "https://example.com"
+                  "location": "City, State",
+                  "category": "Landmark",
+                  "latitude": 40.7128,
+                  "longitude": -74.0060,
+                  "website": "https://example.com",
+                  "cost": "$$",
+                  "detour_time_minutes": 15
+                }
+              ],
+              "hotel_promotions": [
+                {
+                  "name": "Hotel Name",
+                  "location": "City, State near a stop",
+                  "offer": "10% off stay",
+                  "booking_url": "https://booking-url.com"
+                }
+              ],
+              "restaurant_promotions": [
+                {
+                  "name": "Restaurant Name",
+                  "location": "City, State near a stop",
+                  "offer": "Free appetizer with entree",
+                  "website": "https://restaurant-url.com"
                 }
               ]
             }
