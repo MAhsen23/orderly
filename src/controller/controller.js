@@ -582,7 +582,7 @@ exports.planRoadTrip = async (req, res) => {
               - No broken links or 404 errors
               - If no working website exists, leave the website field as an empty string ""
 
-          5.  **Lodging Information:** For EACH stop, you must provide verified, working links for lodging options. Prioritize providing a direct Airbnb search link for the stop's location. Also, provide a general hotel search link (from a site like Booking.com or Expedia).
+          5.  **Lodging Information:** For EACH stop, you must suggest one specific, well-rated hotel. Provide its name and a direct, working booking link (e.g., from Booking.com, Expedia, or the hotel's official site). Also, provide a direct Airbnb search link for the stop's location. All links must be verified and working.
           
           **CRITICAL OUTPUT REQUIREMENTS:**
           - Every stop in the list must be **UNIQUE**. No duplicates.
@@ -613,10 +613,9 @@ exports.planRoadTrip = async (req, res) => {
                   "website": "https://example.com",
                   "cost": "$$",
                   "detour_time_minutes": 15,
-                  "lodging": {
-                    "hotel_link": "https://www.booking.com/searchresults.html?ss=City",
-                    "airbnb_link": "https://www.airbnb.com/s/City--State"
-                  }
+                  "suggested_hotel_name": "Example Hotel",
+                  "hotel_booking_link": "https://www.booking.com/hotel/us/example-hotel.html",
+                  "airbnb_search_link": "https://www.airbnb.com/s/City--State"
                 }
               ]
             }
@@ -718,7 +717,7 @@ exports.planRoadTripWithGrok = async (req, res) => {
               - No broken links or 404 errors
               - If no working website exists, leave the website field as an empty string ""
 
-          5.  **Lodging Information:** For EACH stop, you must provide verified, working links for lodging options. Prioritize providing a direct Airbnb search link for the stop's location. Also, provide a general hotel search link (from a site like Booking.com or Expedia).
+          5.  **Lodging Information:** For EACH stop, you must suggest one specific, well-rated hotel. Provide its name and a direct, working booking link (e.g., from Booking.com, Expedia, or the hotel's official site). Also, provide a direct Airbnb search link for the stop's location. All links must be verified and working.
           
           **CRITICAL OUTPUT REQUIREMENTS:**
           - Every stop in the list must be **UNIQUE**. No duplicates.
@@ -749,10 +748,9 @@ exports.planRoadTripWithGrok = async (req, res) => {
                   "website": "https://example.com",
                   "cost": "$$",
                   "detour_time_minutes": 15,
-                  "lodging": {
-                    "hotel_link": "https://www.booking.com/searchresults.html?ss=City",
-                    "airbnb_link": "https://www.airbnb.com/s/City--State"
-                  }
+                  "suggested_hotel_name": "Example Hotel",
+                  "hotel_booking_link": "https://www.booking.com/hotel/us/example-hotel.html",
+                  "airbnb_search_link": "https://www.airbnb.com/s/City--State"
                 }
               ]
             }
