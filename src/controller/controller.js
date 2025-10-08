@@ -561,9 +561,9 @@ exports.planRoadTrip = async (req, res) => {
         }
 
         const prompt = `
-          You are an expert road trip planner. Your primary goal is to find interesting stops and provide a comprehensive trip plan along the *fastest driving route* between two points. Follow these rules strictly:
+          You are an expert road trip planner. Your primary goal is to find interesting stops and provide a comprehensive trip plan along the *fastest drivable road route* between two points. Follow these rules strictly:
     
-          1.  **Identify the Main Route:** First, determine the single fastest driving route from "${start}" (coordinates: ${startCords.lat}, ${startCords.lng}) to "${end}" (coordinates: ${endCords.lat}, ${endCords.lng}) using major highways.
+          1.  **Identify the Main Route:** First, determine the single fastest driving route from "${start}" (coordinates: ${startCords.lat}, ${startCords.lng}) to "${end}" (coordinates: ${endCords.lat}, ${endCords.lng}). The route must be a conventional driving route suitable for a standard car, using major roads and highways. Avoid any routes that involve ferries, off-road trails, or are not accessible by road.
     
           2.  **Find & Verify Stops:** Find ${stopCountMapping[numberOfStops]} **UNIQUE AND DISTINCT** stops that are geographically ordered along this main route. **DO NOT repeat the same stop.** For each potential stop, you MUST:
               a.  Verify it is currently open and operating as of 2024.
@@ -582,7 +582,7 @@ exports.planRoadTrip = async (req, res) => {
               - No broken links or 404 errors
               - If no working website exists, leave the website field as an empty string ""
 
-          5.  **Promotions:** Find 1-2 relevant hotel or restaurant promotions (discounts, special offers) near any of the stops on the itinerary. Verify the promotion is current.
+          5.  **Lodging Information:** For EACH stop, you must provide verified, working links for lodging options. Prioritize providing a direct Airbnb search link for the stop's location. Also, provide a general hotel search link (from a site like Booking.com or Expedia).
           
           **CRITICAL OUTPUT REQUIREMENTS:**
           - Every stop in the list must be **UNIQUE**. No duplicates.
@@ -612,23 +612,11 @@ exports.planRoadTrip = async (req, res) => {
                   "longitude": -74.0060,
                   "website": "https://example.com",
                   "cost": "$$",
-                  "detour_time_minutes": 15
-                }
-              ],
-              "hotel_promotions": [
-                {
-                  "name": "Hotel Name",
-                  "location": "City, State near a stop",
-                  "offer": "10% off stay",
-                  "booking_url": "https://booking-url.com"
-                }
-              ],
-              "restaurant_promotions": [
-                {
-                  "name": "Restaurant Name",
-                  "location": "City, State near a stop",
-                  "offer": "Free appetizer with entree",
-                  "website": "https://restaurant-url.com"
+                  "detour_time_minutes": 15,
+                  "lodging": {
+                    "hotel_link": "https://www.booking.com/searchresults.html?ss=City",
+                    "airbnb_link": "https://www.airbnb.com/s/City--State"
+                  }
                 }
               ]
             }
@@ -709,9 +697,9 @@ exports.planRoadTripWithGrok = async (req, res) => {
             });
         }
         const prompt = `
-          You are an expert road trip planner. Your primary goal is to find interesting stops and provide a comprehensive trip plan along the *fastest driving route* between two points. Follow these rules strictly:
+          You are an expert road trip planner. Your primary goal is to find interesting stops and provide a comprehensive trip plan along the *fastest drivable road route* between two points. Follow these rules strictly:
     
-          1.  **Identify the Main Route:** First, determine the single fastest driving route from "${start}" (coordinates: ${startCords.lat}, ${startCords.lng}) to "${end}" (coordinates: ${endCords.lat}, ${endCords.lng}) using major highways.
+          1.  **Identify the Main Route:** First, determine the single fastest driving route from "${start}" (coordinates: ${startCords.lat}, ${startCords.lng}) to "${end}" (coordinates: ${endCords.lat}, ${endCords.lng}). The route must be a conventional driving route suitable for a standard car, using major roads and highways. Avoid any routes that involve ferries, off-road trails, or are not accessible by road.
     
           2.  **Find & Verify Stops:** Find ${stopCountMapping[numberOfStops]} **UNIQUE AND DISTINCT** stops that are geographically ordered along this main route. **DO NOT repeat the same stop.** For each potential stop, you MUST:
               a.  Verify it is currently open and operating as of 2024.
@@ -730,7 +718,7 @@ exports.planRoadTripWithGrok = async (req, res) => {
               - No broken links or 404 errors
               - If no working website exists, leave the website field as an empty string ""
 
-          5.  **Promotions:** Find 1-2 relevant hotel or restaurant promotions (discounts, special offers) near any of the stops on the itinerary. Verify the promotion is current.
+          5.  **Lodging Information:** For EACH stop, you must provide verified, working links for lodging options. Prioritize providing a direct Airbnb search link for the stop's location. Also, provide a general hotel search link (from a site like Booking.com or Expedia).
           
           **CRITICAL OUTPUT REQUIREMENTS:**
           - Every stop in the list must be **UNIQUE**. No duplicates.
@@ -760,23 +748,11 @@ exports.planRoadTripWithGrok = async (req, res) => {
                   "longitude": -74.0060,
                   "website": "https://example.com",
                   "cost": "$$",
-                  "detour_time_minutes": 15
-                }
-              ],
-              "hotel_promotions": [
-                {
-                  "name": "Hotel Name",
-                  "location": "City, State near a stop",
-                  "offer": "10% off stay",
-                  "booking_url": "https://booking-url.com"
-                }
-              ],
-              "restaurant_promotions": [
-                {
-                  "name": "Restaurant Name",
-                  "location": "City, State near a stop",
-                  "offer": "Free appetizer with entree",
-                  "website": "https://restaurant-url.com"
+                  "detour_time_minutes": 15,
+                  "lodging": {
+                    "hotel_link": "https://www.booking.com/searchresults.html?ss=City",
+                    "airbnb_link": "https://www.airbnb.com/s/City--State"
+                  }
                 }
               ]
             }
