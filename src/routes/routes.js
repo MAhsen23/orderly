@@ -12,5 +12,6 @@ router.post('/roulette/suggest-restaurant', controller.getSuggestedRestaurant);
 router.get('/roulette/suggestions', controller.getRestaurantSuggestions);
 router.post('/website/check-status', controller.checkWebsiteStatus);
 router.post('/road-trip/plan-grok', controller.planRoadTripWithGrok);
+router.get('/road-trips', controller.getRoadTrips);
 
 module.exports = router;

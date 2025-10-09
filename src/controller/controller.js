@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const { sendOTPEmail, generateOTP } = require('../utils/otpUtils');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { RestaurantSuggestion } = require('../models/restaurantSuggestion');
+const { RoadTrip } = require('../models/roadTrip');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -522,7 +523,7 @@ exports.getRestaurantSuggestions = async (req, res) => {
 
 exports.planRoadTripWithGrok = async (req, res) => {
     try {
-        const { start, end, numberOfStops, stopDuration, activity, costPreference, startCords, endCords } = req.body;
+        const { start, end, numberOfStops, stopDuration, activity, costPreference, startCords, endCords, email } = req.body;
 
         if (!process.env.GROK_API_KEY) {
             return res.status(500).json({
@@ -658,8 +659,26 @@ exports.planRoadTripWithGrok = async (req, res) => {
 
         try {
             const data = JSON.parse(text);
+
+            const roadTripData = new RoadTrip({
+                email: email || 'anonymous@unknown.com',
+                start,
+                end,
+                startCords,
+                endCords,
+                numberOfStops,
+                stopDuration,
+                activity,
+                costPreference,
+                requestDetails: JSON.stringify(req.body),
+                result: JSON.stringify(data),
+            });
+
+            await roadTripData.save();
+
             res.status(200).json({
                 success: true,
+                roadTripId: roadTripData._id,
                 data,
             });
         } catch (e) {
@@ -672,6 +691,54 @@ exports.planRoadTripWithGrok = async (req, res) => {
         res.status(500).json({
             success: false,
             message: error.message
+        });
+    }
+};
+
+exports.getRoadTrips = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const { email } = req.query;
+
+        const filter = {};
+        if (email) {
+            filter.email = email;
+        }
+
+        const totalCount = await RoadTrip.countDocuments(filter);
+        const totalPages = Math.ceil(totalCount / limit);
+
+        const trips = await RoadTrip.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .select('-__v')
+            .lean();
+
+        const parsedTrips = trips.map(trip => ({
+            ...trip,
+            requestDetails: JSON.parse(trip.requestDetails),
+            result: JSON.parse(trip.result),
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: parsedTrips,
+            currentPage: page,
+            totalPages: totalPages,
+            totalCount: totalCount,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1,
+            limit: limit
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch road trips',
+            error: error.message
         });
     }
 };
