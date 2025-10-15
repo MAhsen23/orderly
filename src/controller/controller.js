@@ -591,12 +591,13 @@ exports.planRoadTripWithGrok = async (req, res) => {
               - No broken links or 404 errors
               - If no working website exists, leave the website field as an empty string ""
 
-          5.  **Lodging Information:** For EACH stop, you must suggest one specific, well-rated hotel. Provide its name and a direct, working booking link (e.g., from Booking.com, Expedia, or the hotel's official site). Also, provide a direct Airbnb search link for the stop's location. All links must be verified and working.
+          5.  **Lodging Information:** For EACH stop, you **MUST** provide lodging information inside a 'lodging' object. This includes one specific, well-rated hotel with its name and a direct, working booking link. Also, provide a direct, verified, and working Airbnb search link for the stop's location.
           
           **CRITICAL OUTPUT REQUIREMENTS:**
           - Every stop in the list must be **UNIQUE**. No duplicates.
           - The response MUST include a 'detour_time_minutes' number for every single stop.
           - Only include verified, working website URLs. If none, the field should be an empty string "".
+          - The 'lodging' object with hotel and Airbnb links MUST be present for every stop.
           - The route must make logical driving sense with no large zigzags or backtracking. All stops must be found ALONG the main travel corridor.
     
           Provide a route description, main highways used, total miles, and total drive time for the main route itself (excluding stops).
@@ -621,7 +622,14 @@ exports.planRoadTripWithGrok = async (req, res) => {
                   "longitude": -74.0060,
                   "website": "https://example.com",
                   "cost": "$$",
-                  "detour_time_minutes": 15
+                  "detour_time_minutes": 15,
+                  "lodging": {
+                    "hotel": {
+                      "name": "Specific Hotel Name",
+                      "booking_link": "https://direct-booking-link.com"
+                    },
+                    "airbnb_search_link": "https://www.airbnb.com/s/City--State"
+                  }
                 }
               ]
             }
