@@ -277,42 +277,9 @@ exports.getSuggestedRestaurant = async (req, res) => {
         };
 
         const makeApiCall = async (prompt) => {
-            let text;
-
-            if (apiProvider === 'grok') {
-                if (!process.env.GROK_API_KEY) {
-                    throw new Error('GROK_API_KEY is not configured in the environment variables.');
-                }
-                const groqApiUrl = 'https://api.groq.com/openai/v1/chat/completions';
-                const groqApiKey = process.env.GROK_API_KEY;
-
-                const apiResponse = await fetch(groqApiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${groqApiKey}`,
-                    },
-                    body: JSON.stringify({
-                        model: 'openai/gpt-oss-20b',
-                        messages: [{ role: 'user', content: prompt }],
-                        response_format: { type: 'json_object' },
-                    }),
-                });
-
-                const result = await apiResponse.json();
-                if (result.error) {
-                    throw new Error(result.error.message);
-                }
-
-                text = result.choices[0]?.message?.content.trim();
-                if (!text) {
-                    throw new Error("Received empty response from Groq API.");
-                }
-            } else {
-                const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-                const result = await model.generateContent(prompt);
-                text = result.response.text().trim();
-            }
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const result = await model.generateContent(prompt);
+            let text = result.response.text().trim();
 
             if (text.startsWith("```")) {
                 text = text.replace(/```json/g, "").replace(/```/g, "").trim();
