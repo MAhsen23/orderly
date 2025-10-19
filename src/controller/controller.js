@@ -742,3 +742,110 @@ exports.getRoadTrips = async (req, res) => {
         });
     }
 };
+
+exports.getTopRestaurants = async (req, res) => {
+    try {
+        const { lat, lng } = req.body;
+
+        if (!process.env.GROK_API_KEY) {
+            return res.status(500).json({
+                success: false,
+                message: 'GROK_API_KEY is not configured in the environment variables.',
+            });
+        }
+
+        if (!lat || !lng) {
+            return res.status(400).json({
+                success: false,
+                message: 'Latitude (lat) and Longitude (lng) are required.',
+            });
+        }
+
+        const { city, country } = await getCityAndCountry(lat, lng);
+        const prompt = `
+          You are an expert local guide. Your task is to find the top 5 restaurants in ${city}, ${country} near a specific location based on user reviews.
+          The user is located at latitude ${lat}, longitude ${lng} in ${city}, ${country}.
+          Please find the 5 best restaurants near these coordinates. The ranking should be primarily based on having a high number of positive reviews and a high overall rating.
+
+          For each restaurant, you must provide:
+          1.  **Name:** The full name of the restaurant.
+          2.  **Address:** The complete street address.
+          3.  **Rating:** The numerical rating (e.g., 4.7).
+          4.  **Review Count:** The total number of reviews.
+          5.  **Distance in Miles:** The distance from the user's coordinates (${lat}, ${lng}) to the restaurant, in miles.
+
+          CRITICAL OUTPUT REQUIREMENTS:
+          - You must return exactly 5 restaurants.
+          - All fields (name, address, rating, review_count, distance_miles) are mandatory for each restaurant.
+          - Ensure the information is accurate and up-to-date.
+
+          Respond ONLY in raw JSON (no markdown, no explanation) with the following structure:
+            {
+              "restaurants": [
+                {
+                  "name": "Restaurant Name 1",
+                  "address": "123 Main St, City, State",
+                  "rating": 4.8,
+                  "review_count": 1500,
+                  "distance_miles": 1.2
+                },
+                {
+                  "name": "Restaurant Name 2",
+                  "address": "456 Oak Ave, City, State",
+                  "rating": 4.6,
+                  "review_count": 2200,
+                  "distance_miles": 2.5
+                }
+              ]
+            }
+        `;
+
+        const groqApiUrl = 'https://api.groq.com/openai/v1/chat/completions';
+        const groqApiKey = process.env.GROK_API_KEY;
+
+        const apiResponse = await fetch(groqApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${groqApiKey}`,
+            },
+            body: JSON.stringify({
+                model: 'openai/gpt-oss-20b',
+                messages: [{ role: 'user', content: prompt }],
+                response_format: { type: 'json_object' },
+            }),
+        });
+
+        const result = await apiResponse.json();
+        if (result.error) {
+            return res.status(500).json({ success: false, message: result.error.message });
+        }
+
+        let text = result.choices[0]?.message?.content.trim();
+        if (!text) {
+            return res.status(500).json({ success: false, message: "Received empty response from Groq API." });
+        }
+
+        if (text.startsWith("```")) {
+            text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+        }
+
+        try {
+            const data = JSON.parse(text);
+            res.status(200).json({
+                success: true,
+                data,
+            });
+        } catch (e) {
+            res.status(500).json({
+                success: false,
+                message: "Failed to parse the restaurant data from Groq API.",
+            });
+        }
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
