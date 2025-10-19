@@ -13,6 +13,6 @@ router.get('/roulette/suggestions', controller.getRestaurantSuggestions);
 router.post('/website/check-status', controller.checkWebsiteStatus);
 router.post('/road-trip/plan-grok', controller.planRoadTripWithGrok);
 router.get('/road-trips', controller.getRoadTrips);
-router.post('/restaurants/top', auth, controller.getTopRestaurants);
+router.post('/restaurants/top', controller.getTopRestaurants);
 
 module.exports = router;
