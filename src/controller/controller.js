@@ -277,9 +277,35 @@ exports.getSuggestedRestaurant = async (req, res) => {
         };
 
         const makeApiCall = async (prompt) => {
-            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-            const result = await model.generateContent(prompt);
-            let text = result.response.text().trim();
+            if (!process.env.GROK_API_KEY) {
+                throw new Error('GROK_API_KEY is not configured in the environment variables.');
+            }
+            const groqApiUrl = 'https://api.groq.com/openai/v1/chat/completions';
+            const groqApiKey = process.env.GROK_API_KEY;
+
+            const apiResponse = await fetch(groqApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${groqApiKey}`,
+                },
+                body: JSON.stringify({
+                    model: 'openai/gpt-oss-20b',
+                    messages: [{ role: 'user', content: prompt }],
+                    response_format: { type: 'json_object' },
+                }),
+            });
+
+            const result = await apiResponse.json();
+            if (result.error) {
+                console.error('Groq API error:', result.error.message);
+                return null;
+            }
+
+            let text = result.choices[0]?.message?.content.trim();
+            if (!text) {
+                return null;
+            }
 
             if (text.startsWith("```")) {
                 text = text.replace(/```json/g, "").replace(/```/g, "").trim();
