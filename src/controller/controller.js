@@ -258,7 +258,7 @@ async function isWebsiteActive(url) {
 
 exports.getSuggestedRestaurant = async (req, res) => {
     try {
-        const { lat, lng, diningPreference, distance, budget, cuisine, email, includeChains, apiProvider = 'grok' } = req.body;
+        const { lat, lng, diningPreference, distance, budget, cuisine, email, includeChains, includeTopFive = false } = req.body;
         const { city, country } = await getCityAndCountry(lat, lng);
         const budgetString = Array.isArray(budget) && budget.length > 0 ? budget.join(', ') : 'any';
         const chainInstruction = `Regarding chain restaurants: ${includeChains ? "well-known chain restaurants are acceptable suggestions." : "exclude well-known national or international chain restaurants from the suggestions."}`;
@@ -419,20 +419,86 @@ exports.getSuggestedRestaurant = async (req, res) => {
 
         await restaurantSuggestionData.save();
 
-        if (includeChains && restaurantData.mainSuggestion) {
-            res.status(200).json({
-                success: true,
-                restaurant: restaurantData.mainSuggestion,
-                chainAlternatives: restaurantData.chainAlternatives,
-                suggestionId: restaurantSuggestionData._id
-            });
-        } else {
-            res.status(200).json({
-                success: true,
-                restaurant: restaurantData,
-                suggestionId: restaurantSuggestionData._id
-            });
+        let topFiveRestaurants = [];
+        if (includeTopFive) {
+            if (process.env.GROK_API_KEY) {
+                const topFivePrompt = `
+              You are an expert local guide. Your task is to find the top 5 restaurants for a specific cuisine near a user's location, based on user reviews.
+              The user is located at latitude ${lat}, longitude ${lng} in ${city}, ${country}. They are looking for ${cuisine} restaurants.
+              Please find the 5 best ${cuisine} restaurants near these coordinates. The ranking should be primarily based on having a high number of positive reviews and a high overall rating.
+              For each restaurant, provide:
+              1.  **Name:** The full name of the restaurant.
+              2.  **Address:** The complete street address.
+              3.  **Rating:** The numerical rating (e.g., 4.7).
+              4.  **Review Count:** The total number of reviews.
+              5.  **Distance in Miles:** The distance from the user's coordinates (${lat}, ${lng}) to the restaurant, in miles.
+              CRITICAL OUTPUT REQUIREMENTS:
+              - You must return exactly 5 restaurants.
+              - All fields (name, address, rating, review_count, distance_miles) are mandatory for each restaurant.
+              - Ensure the information is accurate and up-to-date.
+              Respond ONLY in raw JSON (no markdown, no explanation) with the following structure:
+                {
+                  "restaurants": [
+                    {
+                      "name": "Restaurant Name 1",
+                      "address": "123 Main St, City, State",
+                      "rating": 4.8,
+                      "review_count": 1500,
+                      "distance_miles": 1.2
+                    }
+                  ]
+                }
+            `;
+                const groqApiUrl = 'https://api.groq.com/openai/v1/chat/completions';
+                const groqApiKey = process.env.GROK_API_KEY;
+                try {
+                    const apiResponse = await fetch(groqApiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${groqApiKey}`,
+                        },
+                        body: JSON.stringify({
+                            model: 'openai/gpt-oss-20b',
+                            messages: [{ role: 'user', content: topFivePrompt }],
+                            response_format: { type: 'json_object' },
+                        }),
+                    });
+                    const result = await apiResponse.json();
+                    if (result.choices && result.choices[0]) {
+                        let text = result.choices[0]?.message?.content.trim();
+                        if (text) {
+                            if (text.startsWith("```")) {
+                                text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+                            }
+                            const data = JSON.parse(text);
+                            topFiveRestaurants = data.restaurants || [];
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch top five restaurants from Groq:', error);
+                }
+            }
         }
+
+        const responseData = {
+            success: true,
+            suggestionId: restaurantSuggestionData._id,
+        };
+
+        if (includeChains && restaurantData.mainSuggestion) {
+            responseData.restaurant = restaurantData.mainSuggestion;
+            responseData.chainAlternatives = restaurantData.chainAlternatives;
+        } else {
+            responseData.restaurant = restaurantData;
+        }
+
+        if (includeTopFive) {
+            responseData.topFiveRestaurants = topFiveRestaurants;
+        }
+
+        res.status(200).json(responseData);
+
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
